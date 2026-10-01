@@ -50,7 +50,7 @@ def _the_test_files_the_readme_names() -> set[str]:
     fail on a perfectly good sentence.
     """
     what_the_readme_says = THE_README.read_text(encoding="utf-8")
-    return set(re.findall(r"`(test_[a-z0-9_]+\.py)`", what_the_readme_says))
+    return set(re.findall(r"`(?:[\w./-]*/)?(test_[a-z0-9_]+\.py)`", what_the_readme_says))
 
 
 def test_the_readme_names_every_test_file_and_no_file_it_names_is_gone() -> None:

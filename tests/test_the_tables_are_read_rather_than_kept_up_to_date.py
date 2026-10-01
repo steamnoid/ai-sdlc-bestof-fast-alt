@@ -130,7 +130,9 @@ def test_both_tables_name_every_file_between_them() -> None:
     to both places.
     """
     what_the_readme_says = THE_README.read_text(encoding="utf-8")
-    the_files_the_readme_names = set(re.findall(r"`(test_[a-z0-9_]+\.py)`", what_the_readme_says))
+    the_files_the_readme_names = set(
+        re.findall(r"`(?:[\w./-]*/)?(test_[a-z0-9_]+\.py)`", what_the_readme_says)
+    )
     every_test_file = _the_test_files_in(THE_TESTS)
 
     undocumented = every_test_file - the_files_the_readme_names
