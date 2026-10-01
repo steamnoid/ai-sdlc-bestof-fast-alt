@@ -25,6 +25,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from aisdlc.agents.implement_the_plan import the_paths_the_plan_names
 from aisdlc.agents.implementation_plan import ImplementationPlan
 from aisdlc.tools.run_command import ACommand, CommandOutcome, the_outcome_of
 
@@ -50,7 +51,18 @@ def a_commit_recording_the_change(
     nobody can find in a list of four hundred, and the branch is the work item's own because
     the branch is the name the run delivers from.
     """
-    paths = [*plan.files_to_change, *plan.tests_to_add]
+    # **All three of a plan's path lists, through the one function that already knows them.**
+    # `the_paths_the_plan_names` was extended to carry `files_to_add` after a real run could not
+    # finish a change that added an endpoint, and this line kept its own two lists — so a plan
+    # whose change *is* a new file was written to the working tree, committed without it,
+    # verified, and delivered. The change was on the disk and not in the history, which is the
+    # state this repository's own README records a delivery going out in: a green suite and a
+    # pull request carrying none of the work.
+    #
+    # Asked of the shared function rather than restated here, because two places listing a
+    # plan's paths is how they came to disagree in the first place — and this is the second
+    # one in this repository, after the file-contents inspection.
+    paths = the_paths_the_plan_names(plan)
 
     for stage in (
         ACommand(
