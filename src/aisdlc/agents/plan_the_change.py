@@ -212,7 +212,7 @@ def the_prompt_to_plan_a_change(
         "Leave `dependencies` and `migrations` empty unless the change genuinely needs them; "
         "an absent list is read as absent rather than as unknown.\n"
         "\n"
-        "Name something in at least one of these four lists. A plan with all four empty is a "
+        "Name something in at least one of these five lists. A plan with all five empty is a "
         "fault in this run rather than a finding about the repository, and it is refused: the "
         "next thing that happens to a plan is that a person is asked to approve it, and a "
         "person cannot tell an empty plan from a real one by looking at it.\n"
