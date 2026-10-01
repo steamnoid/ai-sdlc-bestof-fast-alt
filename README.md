@@ -658,3 +658,73 @@ Stated rather than left to be discovered.
   glossary guard, the per-cycle commit discipline, `mypy --strict`, the e2e and container tiers.
   This repository was assembled for speed and carries `ruff` and a non-strict `mypy`. That is a real
   trade: the engine's safeguards are not reproduced here, and the engine is where they still run.
+
+---
+
+## Four real runs against `wellbeing-tracker-public`, and every one of them stopped at a gate
+
+**The honest count is zero pull requests.** Four runs, `AISDLC_APPROVAL_POLICY` answering
+unattended, decisions recorded as `autopilot:overnight-autopilot` and never as a person — and
+four refusals, each one specific, each one correct, and **three of the four about the request
+rather than about the system.** That distinction is the finding, so it is made first and it is
+made about my own runs.
+
+**Run 1, on this repository rather than the intended one, and the refusal was right to stop it:**
+
+> The artifact asks for a README line naming the runtime and version, while its own ambiguities
+> record that `.github/workflows/gate.yml` only runs `setup-uv` + pytest/ruff/mypy and installs no
+> Node, and that no `package.json` or `.nvmrc` exists — so the premise in the work item title
+> (name the Node version) has no referent, and requirements 2 and 3 are jointly unsatisfiable
+> under it.
+
+A Python repository does not have a Node version. **The policy compared the requirement against
+the repository and refused, which is the loop working.** I had pointed the run at the wrong
+repository.
+
+**Run 2, on the right repository. The request asked for two mutually exclusive things:**
+
+> Criteria 1–4 and criterion 5 are mutually exclusive branches — the same change cannot both list
+> README in `git diff --name-only` and have an empty diff.
+
+`wellbeing-tracker-public` has no `README.md` at all; its `Dockerfile` pins `node:22-bookworm`. I
+wrote *"if the repository already states it, do not change anything"* and that branch is
+unsatisfiable alongside the other. **Correct refusal, and it named which two criteria collided.**
+
+**Runs 3 and 4 are the ones that are about the system, and the second one is the finding worth
+keeping.** Both asked for an `engines` field in `package.json` naming the Node version. Both were
+refused at **discovery** — before any of the stages this repository spent a week proving — with:
+
+> The report never records the runtime floors that would bound an engines range … Add a finding
+> stating whether package.json already declares engines and which Node versions the repo actually
+> builds and runs against (with evidence links) before this run continues.
+
+**`DiscoveryReport` has no field for what a repository declares about its runtime.** It has
+`build_system`, `ci_system`, `languages`, `frameworks` — and a work item *about a declared runtime*
+is one the artifact cannot serve, because there is nowhere in it to put the answer. The policy is
+asking for a field that does not exist, and it is right to: a person at that gate cannot rule on
+"add the version this project needs" while holding a report that never says what the project
+needs. **This is the same shape as the engine's own recorded finding** — three of four analysis
+artifacts cannot cite a file, and the record says the cycle that reverses it *starts by changing
+the glossary*. It starts there here too.
+
+**And the third run's refusal caught something the inspection had already admitted.** The report's
+`suggested_changes` told `web-app/src/lib/db.js` to resolve its SQLite path the way
+`tests/e2e/infra/env.ts` injects `DATA_DB` — and the report's own `architecture_summary` says that
+file *"the inspection names but does not show"*. **The inspection did its job: it ends by naming
+what it left out, exactly so this is visible. The model reasoned about a file the run never read,
+and a second model caught it by reading the report against the report.** Two independent
+mechanisms, neither of which existed before the file-contents work.
+
+**What the four runs do prove, then.** Six agents ran on real models over a real clone and
+produced artifacts a policy read and judged in detail — the discovery reports name real files with
+clickable links, the requirements quote a two-stage Dockerfile and a three-way test split, and
+every refusal names a specific criterion or a specific missing field rather than saying
+"insufficient". **The gate is not a formality and the artifacts are not noise.** What is missing
+is one field on one artifact, and the run is stopped until it exists — which is the correct
+behaviour and also means **autopilot mode delivers nothing on any work item about a declared
+runtime**, the same conclusion the six runs in `ai-sdlc-bestof-fast-selfaware` reached.
+
+**Not done, and not going to be dressed up:** no pull request was opened, no branch was pushed,
+and the interactive path — the only mode in which this repository has ever delivered anything —
+needs a person at eight gates. Turning the finding above into a field is a change to what
+`DiscoveryReport` *is*, which is a glossary decision rather than a test.
