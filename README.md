@@ -594,6 +594,7 @@ Stated rather than left to be discovered.
   | `test_the_tag_reaching_real_github.py` | that the tag is on a real issue and not only in a payload; files one and closes it — it found the pull-request bug |
   | `test_work_already_tracked_is_not_proposed_again.py` | that a briefing reads the repository's open issues, and that filing refuses a duplicate before anything is opened |
   | `test_the_default_suite_reads_no_deployment_file.py` | that importing the real tier loads no `.env`, which is the claim `gate.yml` makes in a comment and a real run made false |
+  | `test_a_field_of_whitespace_is_absence.py` | that a field holding `" "` is neither an answer nor an absence, asked of every field of the three artifacts that share the rule |
 
   The engine's own suite is where the per-agent contracts are proven, and it still exists in
   `ai-sdlc-os`. **Four of these eight did not exist a week ago**, and three of them exist because a

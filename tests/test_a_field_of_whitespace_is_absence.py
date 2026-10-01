@@ -37,51 +37,108 @@ from aisdlc.agents.qa_plan import QaPlan
 from aisdlc.agents.requirements import Requirements
 
 THE_ARTIFACTS_THAT_REFUSE_AN_ANSWER_THAT_SAID_NOTHING = (
-    (QaPlan, {"scenarios": ["A user opening the page sees the entry form."]}),
     (
-        Requirements,
-        {
-            "requirements": ["The repository's README must name a Node version."],
-            "acceptance_criteria": ["A line in the README names it."],
-        },
+        "QaPlan",
+        QaPlan,
+        "test_strategy",
+        "   ",
+        "scenarios",
+        ["A user opening the page sees the entry form."],
     ),
     (
+        "Requirements",
+        Requirements,
+        "acceptance_criteria",
+        ["   "],
+        "requirements",
+        ["The repository's README must name a Node version."],
+    ),
+    (
+        "DiscoveryReport",
         DiscoveryReport,
-        {
-            "languages": ["TypeScript"],
-            "architecture_summary": "A web application with an API beside it.",
-            "evidence_files": [{"path": "README.md", "link": "https://example.invalid/README.md"}],
-        },
+        "suggested_changes",
+        ["   "],
+        "languages",
+        ["TypeScript"],
     ),
 )
+"""Each artifact, the field to blank, and the field to keep real so the artifact is not empty.
+
+**The blank is shaped like the field, and both shapes are here because a model produces
+both.** A QA plan's `test_strategy` is one string and a model filled it with one space; a
+discovery report's `suggested_changes` is a list and a model put one blank entry in it, which
+is the shape a reader counts. Handing a list field a bare string would not reach the rule at
+all — Pydantic refuses the shape before any validator runs, and the test would be reporting a
+type error rather than an empty field.
+
+**The field is named per artifact, and that is a correction to the first version.** It handed
+`"   "` to `test_strategy` on all three, and Pydantic drops a keyword the model has no field
+for — so two of the three cases were green on code carrying the bug. A shell that accepts the
+absence cannot prove it, and the test below now checks the field is one before using it.
+"""
+
+
+THE_WAYS_THIS_SYSTEM_WRITES_THAT_A_FIELD_SAID_NOTHING = ("", [], None)
+"""Absence is three shapes here, and all three are already in use.
+
+`""` for a field where nothing was said, `[]` for a collection nothing was added to — every
+collection field in every artifact defaults to it — and `None` for a thing that may not exist
+rather than a thing nobody filled in. A field holding whitespace is none of the three, and
+that is the whole claim: it is a fourth way of saying nothing that a reader cannot recognise.
+"""
 
 
 @pytest.mark.parametrize(
-    ("the_artifact", "the_fields_it_was_given"),
+    (
+        "the_artifact_name",
+        "the_artifact",
+        "the_field_to_blank",
+        "the_blank_written_in_it",
+        "the_field_to_keep",
+        "what_it_says",
+    ),
     THE_ARTIFACTS_THAT_REFUSE_AN_ANSWER_THAT_SAID_NOTHING,
-    ids=[
-        an_artifact.__name__
-        for an_artifact, _ in THE_ARTIFACTS_THAT_REFUSE_AN_ANSWER_THAT_SAID_NOTHING
-    ],
+    ids=[a_name for a_name, *_ in THE_ARTIFACTS_THAT_REFUSE_AN_ANSWER_THAT_SAID_NOTHING],
 )
 def test_a_field_holding_only_whitespace_is_read_as_absence(
-    the_artifact: type, the_fields_it_was_given: dict[str, object]
+    the_artifact_name: str,
+    the_artifact: type,
+    the_field_to_blank: str,
+    the_blank_written_in_it: object,
+    the_field_to_keep: str,
+    what_it_says: list[str],
 ) -> None:
-    """A field of `" "` means the same as a field of `""`, or the artifact is not honest.
+    """Every field of every artifact says something or is absent, and there is no third state.
 
     **Every field of every artifact, and per field rather than per artifact.** A rule asked of
     the artifact as a whole is the rule that let this through: the plan said something, so the
     plan was accepted, and the field that said nothing rode along inside it.
+
+    **The field really is a field of this artifact, checked rather than assumed.** A blank
+    handed to a model with no such field is dropped on the way in, the case is green, and the
+    artifact is one that would have carried the blank to a gate.
     """
-    the_answer = the_artifact(**{**the_fields_it_was_given, "test_strategy": "   "})
+    assert the_field_to_blank in the_artifact.model_fields, (
+        f"{the_artifact_name} has no field {the_field_to_blank!r}, so handing it one proves "
+        "nothing: Pydantic drops a keyword the model does not declare, and this case would be "
+        "green on exactly the code it exists to catch"
+    )
+
+    the_answer = the_artifact(
+        **{the_field_to_keep: what_it_says, the_field_to_blank: the_blank_written_in_it}
+    )
 
     for a_field, what_it_holds in the_answer.model_dump().items():
-        assert a_value_that_says_something(what_it_holds) or str(what_it_holds).strip() == "", (
-            f"{the_artifact.__name__}.{a_field} is {what_it_holds!r}. That is neither an answer "
+        is_an_answer = a_value_that_says_something(what_it_holds)
+        is_an_absence = what_it_holds in THE_WAYS_THIS_SYSTEM_WRITES_THAT_A_FIELD_SAID_NOTHING
+
+        assert is_an_answer or is_an_absence, (
+            f"{the_artifact_name}.{a_field} is {what_it_holds!r}. That is neither an answer "
             "nor an absence: this artifact carries a field that says nothing as though it said "
             "something, and a person at a gate reading it cannot tell the two apart. The "
-            "emptiness rule strips whitespace — so a field that said nothing has to be absent in "
-            "the way this system represents absence, which is what it means everywhere else."
+            "emptiness rule strips whitespace — so a field that said nothing has to be one of "
+            f"the {len(THE_WAYS_THIS_SYSTEM_WRITES_THAT_A_FIELD_SAID_NOTHING)} shapes this system "
+            "already writes absence in, and holding whitespace is not one of them."
         )
 
 
