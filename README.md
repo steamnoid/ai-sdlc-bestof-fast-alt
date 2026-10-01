@@ -609,7 +609,9 @@ Stated rather than left to be discovered.
   | `test_a_file_a_plan_brings_into_being_is_committed.py` | that a file a plan creates is in the commit the delivery pushes, asked of `git show` and not of the arguments |
   | `test_a_plan_that_adds_a_file_is_a_plan.py` | that a plan whose whole content is a new file is a plan, and that its refusal names every field it can be empty of |
   | `test_a_test_at_the_repository_root_is_judged_too.py` | that a test at the repository root is judged by the runner's own `include` lines like any other directory |
-  | `test_the_tables_are_read_rather_than_kept_up_to_date.py` | that the two tables above are read rather than trusted — and the third count this repository let go stale |
+  | `test_every_field_a_stage_asks_for_is_a_field_the_answer_has.py` | that every stage's question names only fields the artefact has — the planner asked for `what_it_expectes_next`, which no type has |
+  | `test_every_stage_reasoning_about_a_file_is_shown_it.py` | that every stage reading a repository is shown what is *inside* the files, and that the set of such stages is derived from the signatures rather than written out |
+  | `test_the_tables_are_read_rather_than_kept_up_to_date.py` | that the tables here are read rather than trusted — and the third count this repository let go stale |
 
   | the real tier, a real model and a real repository, opt-in with `-m e2e` | what it holds this repository to |
   |---|---|
@@ -625,6 +627,25 @@ Stated rather than left to be discovered.
   | `test_review_an_artifact.py` | that a real model's decision is signed `autopilot:<policy>` and never as a person, at the version that was presented |
   | `test_brief_this_repository.py` | that every opportunity cites a file the clone holds, and that the run's own judgement is not the type's default |
   | `test_propose_the_work_this_repository_shows.py` | that a proposed request carries no address, and that a title without a body is refused |
+
+  **And the pairs: two neighbouring stages, both on real models, everything else mocked.** Four of
+  the seven neighbouring pairs hand *nothing* over — four stages are given the same clone, and the
+  planner is given requirements and not the security report a person approved four gates earlier.
+  **A pair that shares a substrate cannot be wrong *about* what its neighbour concluded, and can be
+  wrong about the same file from a different starting point** — which is what a gate holding both
+  artifacts is for, and what nothing in the graph compares. So each pair asserts both halves: that
+  the second stage was *not* shown the first stage's conclusion or its judgement, and what a
+  person holding both cards can mechanically check.
+
+  | a pair, both stages real | what it holds this repository to |
+  |---|---|
+  | `pairs/test_the_requirements_into_the_qa_plan.py` | the one true seam: a real `Requirements` is accepted by a real QA analyst, every admitted ambiguity reaches the question, and no judgement does |
+  | `pairs/test_discovery_into_the_product_analyst.py` | the analyst is not handed the report, so the requirements cannot be a summary of what the repository *is*; the derived evidence links are the sharpest half, since nothing on disk can hold one |
+  | `pairs/test_the_qa_plan_into_the_architecture.py` | the architect is handed the clone, not the plan, and so is shown no source and may say nothing about test coverage |
+  | `pairs/test_the_architecture_into_the_security_report.py` | the security analyst reads the inspection that carries file *contents* and names what it left out — the asymmetry that bit a real run |
+  | `pairs/test_the_security_report_into_the_plan.py` | the sharpest pair: the planner never sees the report, so a plan *can* contradict a finding a person approved, and nothing downstream compares the two |
+  | `pairs/test_the_plan_into_the_implementation.py` | the implementer wrote what the plan named and nothing else, and never saw the plan's own judgement |
+  | `pairs/test_the_implementation_into_the_verification.py` | the change was on the disk **at the moment** the second suite call was made, read out of a recording witness rather than inferred afterwards |
 
   **And the table is checked rather than trusted**, by that last row. The tag feature landed with
   eleven tests and a commit message describing a README section that was never written — the edit

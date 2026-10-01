@@ -28,7 +28,7 @@ from aisdlc.llm.correction_budget import (
 from aisdlc.llm.llm_configuration import a_configuration_from_the_environment
 from aisdlc.llm.model_factory import a_model_for
 from aisdlc.tools.github_clone_repository import ClonedRepository
-from aisdlc.tools.inspect_the_repository import an_inspection_of
+from aisdlc.tools.inspect_the_repository import an_inspection_of_the_code
 
 THE_FIELDS_THE_ANSWER_MAY_NAME = (
     "findings",
@@ -105,8 +105,18 @@ def analyze_the_architecture(
     whole repository and asked for its architecture has usually been asked for more than an
     inspection can support, and the refusal is what tells it to say less. A run that
     exhausts the budget raises the last refusal, which is the thing worth showing a person.
+
+    **The inspection carries the file contents, and it did not until a real run refused this
+    stage's own siblings for the opposite.** `an_inspection_of` was built for discovery, whose
+    job is a repository's shape — its own note says source files are deliberately absent from
+    it, and that is right for a summary. This stage is asked for boundaries and risks, which
+    are facts about *what the code does*, and a gate refused a run for reasoning from a
+    `Dockerfile` and a `package.json` alone. **The fix had been made for discovery and nobody
+    checked the stages after it** — the recurring shape in this repository, and the third time
+    in a row here. `tests/test_every_stage_reasoning_about_a_file_is_shown_it.py` now asks
+    every stage that reads a repository, so this is a failure rather than a diff.
     """
-    inspection = an_inspection_of(clone)
+    inspection = an_inspection_of_the_code(clone)
     what_was_wrong: str | None = None
 
     began_at = time.monotonic()

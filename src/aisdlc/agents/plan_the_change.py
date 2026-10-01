@@ -51,7 +51,7 @@ from aisdlc.tools.filesystem_read import (
     the_path_inside_the_project,
 )
 from aisdlc.tools.github_clone_repository import ClonedRepository
-from aisdlc.tools.inspect_the_repository import an_inspection_of
+from aisdlc.tools.inspect_the_repository import an_inspection_of_the_code
 from aisdlc.tools.run_tests import what_the_suite_says_it_collects
 
 THE_DEVELOPER_PLANNING_AGENT = "aisdlc-dev-plan"
@@ -80,10 +80,18 @@ THE_FIELDS_THE_PLAN_MAY_NAME = (
 # wrote *the inspection does not show whether the existing `.gitignore` already ignores
 # `e2e.db-wal`*, and that sentence is the whole of what was missing from a plan that shipped a
 # test asserting nothing.
+#
+# **The third was spelled `what_it_expectes_next` here, and a prompt string is not covered by a
+# type.** The model was asked for a field the tool schema it is bound to does not declare, so a
+# model obeying this prose would return a key `WhatAnAgentJudged` refuses — a `ValidationError`
+# spending a correction, or a dropped field. It survived because four other stages spell the same
+# field correctly and a real run's model followed the schema rather than the prose, which is luck
+# rather than correctness. `tests/test_every_field_a_stage_asks_for_is_a_field_the_answer_has.py`
+# now asks every stage, so a second copy of this mistake is a failure rather than a diff.
 THE_JUDGEMENTS_THE_PLAN_MAY_NAME = (
     "what_it_found",
     "what_it_could_not_settle",
-    "what_it_expectes_next",
+    "what_it_expects_next",
 )
 
 THE_ROOT_DIRECTORY = ""
@@ -252,8 +260,17 @@ def plan_the_change(
     A run that exhausts the budget raises the *last* refusal. The caller needs the last thing
     that was wrong, because that is what a person can act on; three near-miss citations help
     nobody decide what to do next.
+
+    **The inspection carries the file contents, and this stage names paths from it.** A plan is
+    `files_to_change` — files that exist and are edited in place — so a planner shown only a
+    listing is choosing from filenames it has not read, and a real run refused a plan for
+    reasoning about a `Dockerfile` whose contents the plan itself said it had not seen.
+    `an_inspection_of` was built for discovery and the fix had been made for discovery without
+    anyone checking the stages after it;
+    `tests/test_every_stage_reasoning_about_a_file_is_shown_it.py` now asks every stage that
+    reads a repository.
     """
-    inspection = an_inspection_of(clone)
+    inspection = an_inspection_of_the_code(clone)
     what_was_wrong: str | None = None
     last: (
         APathNotAPathError
