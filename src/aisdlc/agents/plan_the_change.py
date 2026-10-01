@@ -52,6 +52,7 @@ from aisdlc.tools.filesystem_read import (
 )
 from aisdlc.tools.github_clone_repository import ClonedRepository
 from aisdlc.tools.inspect_the_repository import an_inspection_of
+from aisdlc.tools.run_tests import what_the_suite_says_it_collects
 
 THE_DEVELOPER_PLANNING_AGENT = "aisdlc-dev-plan"
 
@@ -82,8 +83,18 @@ THE_FIELDS_THE_PLAN_MAY_NAME = (
 THE_JUDGEMENTS_THE_PLAN_MAY_NAME = (
     "what_it_found",
     "what_it_could_not_settle",
-    "what_it_expects_next",
+    "what_it_expectes_next",
 )
+
+THE_ROOT_DIRECTORY = ""
+"""The repository's top level, as the directory rules below name it.
+
+`Path("a.test.ts").parent.relative_to(clone)` is `.` there, and `.` is a name a runner's `include`
+patterns would never contain and a reader of a refusal would not recognise. So it is written as
+the empty string — which is what a path relative to the root is — and the two helpers that
+decide a directory are handed the same spelling in both directions. A rule that has to name the
+root is a rule somebody will leave out of the list.
+"""
 
 
 class PlannedTestDirectoryNotFoundError(Exception):
@@ -449,8 +460,17 @@ def _every_test_is_where_the_suite_will_look_for_it(
         # machine with a real projects root, which is the only place a symlink shows up.
         # `filesystem_read` already resolves both sides for exactly this reason and says so.
         its_directory = str(where.parent.relative_to(clone.path.resolve()))
-        if its_directory in ("", "."):
-            continue
+        if its_directory == ".":
+            # **The root is a directory like any other, and it used to be judged by no rule at
+            # all.** This line skipped the whole loop body for a test at the top level, before the
+            # runner was consulted and before the repository was asked — so `tests/unit/**` in a
+            # runner's own `include` lines, and a root holding no test of its own, both said
+            # nothing about it. A real model was refused four times for putting a test where the
+            # repository keeps none and then answered with one at the root, and the suite would
+            # have passed identically on both sides of the change: the delivery would carry a
+            # test nobody opened, and verification would fail two stages later about a test that
+            # had never run. That is the exact failure this function was written for.
+            its_directory = THE_ROOT_DIRECTORY
 
         if what_the_runner_collects is not None:
             # **The runner's answer wins, and it is asked first.** It is the more precise one:
@@ -535,7 +555,14 @@ def _this_directory_already_holds_a_test(clone: ClonedRepository, its_directory:
     is one that might be collected or might not, and there is no evidence either way. Where the
     runner has spoken, its answer wins — it is the more precise one.
     """
-    the_directory = clone.path / its_directory
+    # **The root is `clone.path` itself, and `clone.path / ""` is not a directory at all** — the
+    # join resolves to the file rather than to a directory, so without this the root would be
+    # the one directory the rule could not read. That is why the root is written as `""` and
+    # normalised here rather than excluded upstream: a rule that cannot read a case cannot judge
+    # it, and the case is the one a real model produced.
+    the_directory = (
+        clone.path if its_directory == THE_ROOT_DIRECTORY else clone.path / its_directory
+    )
     if not the_directory.is_dir():
         return False
     # **Only what is directly in it, and never anything below it.** `tests/` holds no test of its
@@ -545,18 +572,22 @@ def _this_directory_already_holds_a_test(clone: ClonedRepository, its_directory:
 
 
 def _the_directories_the_runner_says_it_collects(what_the_suite_announced: str) -> list[str]:
-    """The directory prefixes out of the runner's own `include` lines, in the order it printed."""
-    the_includes: list[str] = []
-    for a_line in what_the_suite_announced.splitlines():
-        stripped = a_line.strip()
-        if not stripped.startswith("include:"):
-            continue
-        the_value = stripped.removeprefix("include:").strip()
-        for one_pattern in the_value.split(","):
-            a_pattern = one_pattern.strip().strip("'\"")
-            if a_pattern:
-                the_includes.append(a_pattern)
-    return the_includes
+    """The `include` patterns out of the runner's own opening lines, as the suite printed them.
+
+    **The reader is `run_tests`'s and not a second one, and this was a real defect.** This
+    function used to split a line on every comma, so `tests/unit/**/*.{test,spec}.ts` — one
+    pattern — became `tests/unit/**/*.{test` and `spec}.ts`, two globs that match nothing. Every
+    directory the runner collects then looked uncollected, the planner refused plans that were
+    right, and — because the second fragment names no directory at all — the repository's top
+    level looked collected too, which is the case that hid the root entirely.
+
+    `run_tests.py` already had the fix, with the reason written down: a brace is what tells a
+    comma inside a pattern from a comma between patterns. **Two readers of one line is two
+    opinions about it, and this is the second time in this repository that a rule written once
+    and needed twice arrived twice** — the first was the file-contents inspection, and the second
+    is this.
+    """
+    return what_the_suite_says_it_collects(what_the_suite_announced)
 
 
 def _the_runner_collects_this_directory(the_includes: list[str], a_directory: str) -> bool:
@@ -565,11 +596,22 @@ def _the_runner_collects_this_directory(the_includes: list[str], a_directory: st
     **The prefix has to end on a segment boundary**, which is what makes `tests/unit/**` refuse
     `tests` and `tests/**` accept it. A pattern with no `**` is a file pattern, so a directory is
     only reached by one that could hold files below it.
+
+    **The root is reached by a pattern with no directory part, which is the one exception to
+    "a file pattern reaches no directory".** `*.test.ts` names files in the top level and files
+    in no directory at all, so it collects the root and nothing else; read by prefix it names a
+    prefix that matches no directory, and the root would be refused for a runner that plainly
+    collects it. So the empty directory is reached by a pattern that is itself one segment of a
+    file name — and by nothing else, because `tests/**` reaching the root would be the same
+    prefix rule with a different spelling.
     """
     for a_pattern in the_includes:
         prefix = a_pattern.split("**", 1)[0].rstrip("/")
         if not prefix:
             # `**` with nothing before it reaches every directory in the repository.
+            return True
+        if a_directory == THE_ROOT_DIRECTORY and "/" not in prefix:
+            # A pattern that names no directory collects the top level, and only the top level.
             return True
         if a_directory == prefix or a_directory.startswith(f"{prefix}/"):
             return True
