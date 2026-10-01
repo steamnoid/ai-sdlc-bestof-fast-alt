@@ -606,7 +606,25 @@ Stated rather than left to be discovered.
   | `test_work_already_tracked_is_not_proposed_again.py` | that a briefing reads the repository's open issues, and that filing refuses a duplicate before anything is opened |
   | `test_the_default_suite_reads_no_deployment_file.py` | that importing the real tier loads no `.env`, which is the claim `gate.yml` makes in a comment and a real run made false |
   | `test_a_field_of_whitespace_is_absence.py` | that a field holding `" "` is neither an answer nor an absence, asked of every field of the three artifacts that share the rule |
+  | `test_a_file_a_plan_brings_into_being_is_committed.py` | that a file a plan creates is in the commit the delivery pushes, asked of `git show` and not of the arguments |
+  | `test_a_plan_that_adds_a_file_is_a_plan.py` | that a plan whose whole content is a new file is a plan, and that its refusal names every field it can be empty of |
+  | `test_a_test_at_the_repository_root_is_judged_too.py` | that a test at the repository root is judged by the runner's own `include` lines like any other directory |
   | `test_the_tables_are_read_rather_than_kept_up_to_date.py` | that the two tables above are read rather than trusted — and the third count this repository let go stale |
+
+  | the real tier, a real model and a real repository, opt-in with `-m e2e` | what it holds this repository to |
+  |---|---|
+  | `test_discovery.py` | that a real model reads a real repository, and that every path a report names is a file the clone holds |
+  | `test_analyze_the_repository.py` | that a real analyst answers a real request, and that every ambiguity says who can settle it |
+  | `test_analyze_the_requirements.py` | that a real QA plan is built from approved requirements and names no file in a repository it was never shown |
+  | `test_analyze_the_architecture.py` | that every package a report claims at a named version is in the manifest, and that a module list is a judgement nothing here can grade |
+  | `test_inspect_for_security_risk.py` | that no finding's evidence is a file the run never saw, and that every finding is weighed on all five of its fields |
+  | `test_plan_the_change.py` | that a real plan names only paths the clone holds or is allowed to create, in a directory the suite collects |
+  | `test_implement_the_plan.py` | that a real model's change lands on the disk holding exactly what it proposed, and that nothing outside the plan was written |
+  | `test_apply_the_plan.py` | that the change is committed under the agent's name, the suite is asked on both sides, and a change nothing observed is refused |
+  | `test_supervise_a_repair.py` | that a real model's verdict names a node the compiled graph actually has, and that the run did not die of the wiring |
+  | `test_review_an_artifact.py` | that a real model's decision is signed `autopilot:<policy>` and never as a person, at the version that was presented |
+  | `test_brief_this_repository.py` | that every opportunity cites a file the clone holds, and that the run's own judgement is not the type's default |
+  | `test_propose_the_work_this_repository_shows.py` | that a proposed request carries no address, and that a title without a body is refused |
 
   **And the table is checked rather than trusted**, by that last row. The tag feature landed with
   eleven tests and a commit message describing a README section that was never written — the edit

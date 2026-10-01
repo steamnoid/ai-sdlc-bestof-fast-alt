@@ -63,16 +63,31 @@ def test_every_field_a_plan_may_name_is_read_by_its_emptiness_rule() -> None:
     """
     from aisdlc.agents.plan_the_change import THE_FIELDS_THE_PLAN_MAY_NAME
 
+    # **A sentinel in every field, and the rule is asked which of them it reads.** Every field
+    # is a list, and a list of nothing compares equal to a list of nothing, so two empty fields
+    # are indistinguishable and an empty rule looks like complete coverage. Each field is
+    # therefore given a value nothing else could be holding, and the rule is read against those
+    # values rather than against positions.
+    #
+    # A plan the rule accepts, so the method is reachable at all — asking about a plan the
+    # validator would refuse means building one that cannot exist, which is what the first
+    # version of this test did: it passed `files_to_add=["x"]` and was refused for the very
+    # field it was asking about.
+    a_sentinel_in = {
+        a_field: [f"a-sentinel-in-{a_field}"] for a_field in THE_FIELDS_THE_PLAN_MAY_NAME
+    }
+    what_the_rule_reads = ImplementationPlan(**a_sentinel_in).everything_it_says()
+
     the_fields_the_rule_reads = {
         a_field
-        for a_field, a_value in ImplementationPlan(files_to_add=["x"]).everything_it_says()
-        if a_value or a_value == []
+        for a_field, a_sentinel in a_sentinel_in.items()
+        if a_sentinel in what_the_rule_reads
     }
 
     unread = set(THE_FIELDS_THE_PLAN_MAY_NAME) - the_fields_the_rule_reads
 
     assert not unread, (
-        f"{sorted(unread)} may be named in a plan and `everything_it_says` does not return them, "
+        f"{sorted(unread)} may be named in a plan and `everything_it_says` does not read them, "
         "so a plan whose only content is one of them raises `EmptyPlanError` with a message "
         "listing four things the plan never claimed to do. The prompt asks the model to fill all "
         f"{len(THE_FIELDS_THE_PLAN_MAY_NAME)} fields, so the model is asked for a thing the "

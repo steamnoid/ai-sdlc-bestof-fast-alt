@@ -19,18 +19,18 @@ if a sentence denying it survives, the tier is missing something and that is the
 a failure. The prose is left to a reader, and the quantity it would have been checked against is
 checked here.
 
-**The agents are read out of the production model and not written out.** `TheAgentsThisRun` is
-the one place that says which collaborators a run is given, so a stage wired into a pipeline and
-a stage proved alone are compared by construction. A list typed into this file would be a fourth
-place to forget a stage, and the thing being guarded is a section that forgot one.
+**The stages are read out of the production code and not written out.** Which modules in
+`agents/` take a model is a fact about the source, so it is computed from the source. A list
+typed into this file would be a fourth place to forget a stage, and the thing being guarded is a
+section that forgot one — twice, in the two ways a count can be right and the prose beside it
+wrong.
 """
 
 from __future__ import annotations
 
+import ast
 import re
 from pathlib import Path
-
-from aisdlc.graph.the_agents_this_run import TheAgentsThisRun
 
 THE_README = Path(__file__).resolve().parent.parent / "README.md"
 THE_TESTS = Path(__file__).resolve().parent
@@ -41,71 +41,82 @@ def _the_test_files_in(the_tier: Path) -> set[str]:
     return {a_file.name for a_file in the_tier.rglob("test_*.py") if a_file.is_file()}
 
 
-THE_STAGE_A_RUN_WALKS_AND_THE_MODULE_THAT_IS_IT = {
-    "discover_the_repository",
-    "analyze_the_repository",
-    "analyze_the_requirements",
-    "analyze_the_architecture",
-    "inspect_for_security_risk",
-    "plan_the_change",
-    "implement_the_plan",
-    "supervise_a_repair",
-    "brief_this_repository",
-    "propose_the_work_this_repository_shows",
-    "review_an_artifact",
-    "open_the_delivery",
-}
-"""Every stage of a run, named as the production module that is the stage.
+def _the_stages_that_ask_a_model() -> set[str]:
+    """Every module in `agents/` that takes a model, read out of the production code.
 
-**The module name and not the field name of `TheAgentsThisRun`, and the two are deliberately
-different.** `propose_requirements` is what the product analyst is *asked for* — §10's question
-for that discipline — and `analyze_the_repository` is the module implementing it. A guard
-matching file names against field names would fail on that difference and be quietly loosened
-until it passed, which is how a guard stops guarding. So the stages are named as modules here,
-and the count is cross-checked against the production model so a stage added there cannot be
-added here without being noticed.
-"""
+    **Computed and not written out, which is the whole point of this file.** The first version
+    of this test held a list of twelve stage names, and the list was wrong twice before it was
+    checked against anything: it named a stage whose file is called `test_discovery.py` and
+    reported it unproven when it was proven and sitting on disk, and it demanded a real-model
+    test for the delivery node — which asks no model at all, and whose real-model question does
+    not exist. A list is a fourth place to forget a stage, and a wrong list is worse than none
+    because it fails on correct code and a reader stops reading it.
+
+    **A function whose signature takes a model is the claim, read from the signature.** A module
+    whose public function is handed a `BaseChatModel` is a stage that reasons, and §0.4's "an
+    agent is not implemented until it has been observed producing validated output" is about
+    those and only those. A stage that pushes a branch asks no model and is covered by the whole
+    run, which is where a push belongs.
+    """
+    the_agents = Path(__file__).resolve().parent.parent / "src" / "aisdlc" / "agents"
+
+    asking_a_model = set()
+    for a_module in sorted(the_agents.glob("*.py")):
+        for a_definition in ast.parse(a_module.read_text()).body:
+            if not isinstance(a_definition, ast.FunctionDef):
+                continue
+            arguments = [
+                an_argument.arg
+                for an_argument in [*a_definition.args.args, *a_definition.args.kwonlyargs]
+            ]
+            if "model" in arguments or "the_model" in arguments:
+                asking_a_model.add(a_module.stem)
+                break
+
+    return asking_a_model
 
 
-def test_every_stage_a_run_walks_has_a_file_that_proves_it_alone() -> None:
-    """Every stage listed above is proven alone by a file of the real tier named after it.
+def test_every_stage_that_asks_a_model_has_a_file_that_proves_it_alone() -> None:
+    """Every module in `agents/` that takes a model is proven alone by a file of the real tier.
 
     **The file is named after the stage rather than counted, and the naming is the check.** A
     tier that grew a dozen files and proved nothing would satisfy a count. A file whose name
     mentions a stage is a file that says what it is about, so a name matching none of them is
     the case worth refusing — and a reader arriving at that file learns from its name alone.
 
-    **The count is checked against production, so this list cannot quietly fall behind.** A
-    collaborator added to `TheAgentsThisRun` changes the number of fields, and this is where
-    that becomes a failure rather than a note in a document nobody diffs.
+    **`discover_the_repository` is matched on `discover`, and the exception is written down.**
+    A production module is named after what it does and a test file after what a reader calls
+    the thing, and for this one stage those differ. The alternative is a rename in one direction
+    or the other, and a rename is a bigger change than naming the difference.
     """
     the_files = _the_test_files_in(THE_REAL_TIER)
     assert the_files, (
         f"{THE_REAL_TIER} holds no test file, so this is comparing an empty set against the "
-        "stages a run walks and would pass forever"
+        "stages that ask a model and would pass forever"
+    )
+
+    the_word_a_file_is_named_after = {"discover_the_repository": "discover"}
+
+    the_stages = _the_stages_that_ask_a_model()
+    assert the_stages, (
+        "no module in src/aisdlc/agents/ takes a model, which means this system has no reasoning "
+        "stage and this file is guarding a thing that does not exist"
     )
 
     not_proven_alone = sorted(
         a_stage
-        for a_stage in THE_STAGE_A_RUN_WALKS_AND_THE_MODULE_THAT_IS_IT
-        if not any(a_stage in a_file for a_file in the_files)
+        for a_stage in the_stages
+        if not any(
+            the_word_a_file_is_named_after.get(a_stage, a_stage) in a_file for a_file in the_files
+        )
     )
 
     assert not not_proven_alone, (
-        f"{not_proven_alone} are stages a run walks, and no file in {THE_REAL_TIER.name}/ is "
-        "named after one of them. A stage wired into a pipeline with nothing proving it alone "
-        "is a stage that can stop working and fail silently, because the run carries on to the "
-        "next gate either way — which is the whole reason this tier exists, and the reason a "
-        "README may not say these contracts are unprovable here."
-    )
-
-    how_many_collaborators_a_run_is_handed = len(TheAgentsThisRun.model_fields)
-    assert how_many_collaborators_a_run_is_handed == 8, (
-        f"{TheAgentsThisRun.__name__} now hands a run {how_many_collaborators_a_run_is_handed} "
-        f"collaborators and it used to hand it 8. This file names the stages a run walks, so a "
-        "collaborator added there has to be added here and given a file of its own — otherwise "
-        "the new stage is the one nothing proves alone, which is the gap this repository is "
-        f"closing. The collaborators are {sorted(TheAgentsThisRun.model_fields)}."
+        f"{not_proven_alone} ask a model, and no file in {THE_REAL_TIER.name}/ is named after "
+        "one of them. A stage wired into a pipeline with nothing proving it alone is a stage "
+        "that can stop working and fail silently, because the run carries on to the next gate "
+        "either way — which is the whole reason this tier exists, and the reason a README may "
+        "not say these contracts are unprovable here."
     )
 
 
