@@ -576,8 +576,8 @@ Stated rather than left to be discovered.
   reading the source, and the first is fixed. The third was found by looking at a real card, which
   is `on __interrupt__`.
 - **Every unit and graph test the engine had.** Its 686 unit tests, 150 graph tests and 45
-  end-to-end tests were not copied. This repository ships ten test files, and each one is a claim
-  rather than a category:
+  end-to-end tests were not copied. This repository ships ten test files beside this one, and each
+  one is a claim rather than a category:
 
   | file | what it holds this repository to |
   |---|---|
@@ -593,6 +593,7 @@ Stated rather than left to be discovered.
   | `test_the_readme_names_what_this_repository_holds_itself_to.py` | that this table names every test file, which it twice did not |
   | `test_the_tag_reaching_real_github.py` | that the tag is on a real issue and not only in a payload; files one and closes it — it found the pull-request bug |
   | `test_work_already_tracked_is_not_proposed_again.py` | that a briefing reads the repository's open issues, and that filing refuses a duplicate before anything is opened |
+  | `test_the_default_suite_reads_no_deployment_file.py` | that importing the real tier loads no `.env`, which is the claim `gate.yml` makes in a comment and a real run made false |
 
   The engine's own suite is where the per-agent contracts are proven, and it still exists in
   `ai-sdlc-os`. **Four of these eight did not exist a week ago**, and three of them exist because a

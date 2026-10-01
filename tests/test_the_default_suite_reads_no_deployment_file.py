@@ -80,7 +80,7 @@ def _what_a_fresh_interpreter_sees_after_importing(the_conftest: Path) -> str:
         " if os.environ.get(a_setting)])"
     )
 
-    answered = subprocess.run(  # noqa: S603
+    answered = subprocess.run(
         [sys.executable, "-c", a_question],
         capture_output=True,
         text=True,
