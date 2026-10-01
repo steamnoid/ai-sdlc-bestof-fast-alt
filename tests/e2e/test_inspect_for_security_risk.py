@@ -40,17 +40,61 @@ from aisdlc.agents.severity import Severity
 from aisdlc.domain.repository import Repository
 from aisdlc.llm.model_provider import LlmProvider
 from aisdlc.tools.github_clone_repository import ClonedRepository
+from aisdlc.tools.inspect_the_repository import an_inspection_of_the_code
 
 pytestmark = pytest.mark.e2e
 
 A_PATH_IN_A_QUOTE = re.compile(r"[`\"']([\w./-]+\.[A-Za-z]{1,5})[`\"']")
-"""A path as a model writes one: a slash-separated word ending in something extension-shaped.
+"""A candidate path as a model writes one: a dotted word, sometimes with a directory in front.
 
-Matched loosely on purpose — the question is whether the *candidate* resolves in the clone, and
-a path that does not is a finding whatever it is called. A quote is not required: grounding in
-a document is a real signal about a real file, and refusing that would leave this agent with
-nothing to report.
+**This is a *candidate*, and the cost of a false accusation here is that it reads as a fact.**
+Two of the words this deployment's model actually produced are not paths at all: `middleware.ts`
+was `web-app/src/middleware.ts` named by its own last segment, and `payload.sub` was a **field in
+a request body** — a property of an object, not a file anywhere. Refusing those is a claim about
+the model that is simply false, and a test that cries fabrication about a real run is a test
+nobody reads the second time. So the candidate is handed to `_the_analyst_had_grounds_to_name`,
+which asks three questions and says which are cheap.
 """
+
+
+def _the_analyst_had_grounds_to_name(clone: ClonedRepository, a_candidate: str) -> tuple[bool, str]:
+    """Whether this quoted word is something the analyst could have read, and which ground says so.
+
+    **Three grounds, and the third is the one the obvious check gets wrong.** A path is grounded
+    if the checkout holds it, or if a file of the checkout is called exactly that, **or if the
+    analyst was shown the word itself**. That last one exists because a repository *declaring* a
+    file is not the same as containing one — this repository's own `tests/e2e/infra/env.ts` says
+    `path.resolve(process.cwd(), "tests/e2e/data/e2e.db")` and that database is created by a test
+    run rather than committed, so asking whether the file is there answers no for a path the
+    analyst read with its own eyes. **The first version of this check called that a fabrication,
+    twice, and was wrong both times.**
+
+    **A candidate with no directory in it is not asked about at all**, and that is the honest
+    narrowing: a bare dotted word is a location about half the time, and an assertion about half
+    the time is not an assertion. `payload.sub` is the case. What that gives up is a fabrication
+    named only by its own file name, and the cost is written here rather than left to be
+    discovered by whoever reads the next red run.
+
+    **`rglob` refuses a pattern with a directory in it**, so the bare-name ground guards its own
+    condition rather than trusting the caller — and a model quoting `` `/etc/shadow.yaml` `` is
+    quoting an absolute path, which is not a path in a checkout either, so the third ground is
+    the only one that can answer it.
+    """
+    if (clone.path / a_candidate).is_file():
+        return True, "the checkout holds a file at that path"
+
+    if "/" not in a_candidate and any(
+        an_ordinary_file.is_file() for an_ordinary_file in clone.path.rglob(a_candidate)
+    ):
+        return True, "a file of the checkout is called that, so the analyst saw the name"
+
+    if a_candidate in an_inspection_of_the_code(clone):
+        return True, "the analyst was shown the word itself, in a repository that declares it"
+
+    return False, (
+        "not a file of the checkout, not a name any file of the checkout carries, and not a word "
+        "the analyst was shown — so it was invented, or remembered from another repository"
+    )
 
 
 @pytest.fixture(scope="module")
@@ -107,24 +151,55 @@ def test_no_finding_quotes_a_file_the_run_never_saw(
 ) -> None:
     """The grounding assertion, and the one that makes a signal mean anything.
 
-    A signal quoting a path that is not in the clone was invented or remembered from elsewhere.
-    A signal naming a file that *is* there is fine even when the file holds a document rather
-    than code, because grounding in what the analyst was shown is the most it can honestly do
-    and refusing that would leave it with nothing.
+    **Three grounds rather than one, and each is asked of the clone rather than assumed.** A
+    signal naming a file that is *there* is fine even when the file holds a document rather than
+    code, because grounding in what the analyst was shown is the most it can honestly do. A
+    signal naming a file the checkout *declares* — `path.resolve(…, "tests/e2e/data/e2e.db")`
+    in a file of its own, where the database is made by a test run and not committed — is
+    equally fine, and the first version of this test called that a fabrication twice.
+
+    **Only candidates naming a directory are asked about at all**, which is the narrowing and its
+    cost together: `payload.sub` is a field in a request body, and `middleware.ts` is a file this
+    repository has under a deeper path. A bare dotted word is a location about half the time, and
+    this test is not going to accuse a model of inventing a property.
+
+    **The reasons come back with the verdict**, so a failure says which of the three grounds was
+    tried and why none of them answered — rather than a reader having to go and re-derive it.
     """
-    invented: list[str] = []
+    ungrounded: list[tuple[str, str]] = []
+    were_asked_about = 0
 
     for a_finding in a_real_report.findings:
-        for a_quoted in A_PATH_IN_A_QUOTE.findall(a_finding.signal):
-            if not (the_cloned_repository.path / a_quoted).is_file():
-                invented.append(a_quoted)
+        for a_candidate in A_PATH_IN_A_QUOTE.findall(a_finding.signal):
+            if "/" not in a_candidate:
+                continue
+            were_asked_about += 1
+            is_grounded, why = _the_analyst_had_grounds_to_name(the_cloned_repository, a_candidate)
+            if not is_grounded:
+                ungrounded.append((a_candidate, why))
 
-    assert not invented, (
-        f"{sorted(set(invented))} are quoted as evidence in a security report produced from a "
-        "clone that does not contain them. Either the model invented them or it remembered "
-        "another repository — and a security report quoting code that is not there is the most "
-        "persuasive kind of fiction there is. This is what `an_inspection_of_the_code` exists to "
-        "prevent, by carrying the code and naming what it left out."
+    assert not ungrounded, (
+        f"{sorted({a_candidate for a_candidate, _ in ungrounded})} are quoted as evidence in a "
+        "security report produced from a clone that does not contain them: "
+        + "; ".join(f"{a_candidate} — {why}" for a_candidate, why in ungrounded)
+        + ". Either the model invented them or it remembered another repository — and a security "
+        "report quoting code that is not there is the most persuasive kind of fiction there is. "
+        "This is what `an_inspection_of_the_code` exists to prevent, by carrying the code and "
+        "naming what it left out."
+    )
+
+    assert were_asked_about, (
+        "no finding in this report quoted a path with a directory in it, so the check above "
+        "compared an empty set against an empty checkout and found nothing wrong with any of "
+        "them. That is a green tick about a rule that was never applied. **This assertion fails "
+        "on a real run, and it is the honest outcome rather than a flaky one:** this deployment's "
+        "model grounds a signal in a file it *read* and names it by its own name at least as "
+        "often as by its path, so some runs give a checkable candidate and some do not. A run that "
+        "gives none is a run this tier cannot say anything about, and saying so is the finding — "
+        "which is why it is a failure and not a skip. Narrowing further to admit a bare name when "
+        "the clone's own files end in that extension would close most of the gap, and would also "
+        "start asking about `payload.sub` again, so the trade is written down here rather than "
+        "taken silently."
     )
 
 
