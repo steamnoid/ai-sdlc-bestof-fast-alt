@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, model_validator
 
-from aisdlc.agents.a_value_that_says_something import a_value_that_says_something
+from aisdlc.agents.a_value_that_says_something import a_value_that_says_something, as_absence
 from aisdlc.domain.repository import Repository
 
 THE_DISCOVERY_AGENT = "aisdlc-discover"
@@ -74,6 +74,24 @@ class DiscoveryReport(BaseModel):
             self.evidence_files,
             self.suggested_changes,
         )
+
+    @model_validator(mode="after")
+    def a_field_that_said_nothing_is_absence(self) -> DiscoveryReport:
+        """A field holding whitespace becomes the absence this system already represents.
+
+        **A reader counts the entries.** `suggested_changes` is a list a person reads as a
+        count of what the agent thought this repository wanted, and a list holding one blank
+        entry is a report claiming a suggestion it did not make. `build_system` is the
+        opposite case and the reason `None` is left alone: a repository with no build system is
+        a fact about the repository rather than a field the model failed to fill.
+
+        **The same rule as the other two artifacts, for the same reason.** A fix written
+        against the shape a bug was found in would be the third in this repository made where
+        the finding was rather than where the rule is.
+        """
+        for a_field in type(self).model_fields:
+            setattr(self, a_field, as_absence(getattr(self, a_field)))
+        return self
 
     @model_validator(mode="after")
     def it_must_say_something_about_the_repository(self) -> DiscoveryReport:

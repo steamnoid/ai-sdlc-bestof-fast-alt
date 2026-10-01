@@ -575,13 +575,24 @@ Stated rather than left to be discovered.
   colour and the word of an approved one, and no way to start a run at all — were found by
   reading the source, and the first is fixed. The third was found by looking at a real card, which
   is `on __interrupt__`.
-- **Every unit and graph test the engine had.** Its 686 unit tests, 150 graph tests and 45
-  end-to-end tests were not copied. This repository ships ten test files, and each one is a claim
-  rather than a category:
+- ~~**Every unit and graph test the engine had.**~~ **The per-agent contracts are proven here
+  now, and the tier that proves them is the thing this repository did not have.** Its 686 unit
+  tests, 150 graph tests and 45 end-to-end tests were still not copied, and the claim below used
+  to be that the per-agent contracts could only be proven in `ai-sdlc-os`. That was a real gap and
+  it was the whole reason this copy exists: **every claim this repository made about discovery, the
+  requirements, the QA plan, the architecture report, the security report, the plan, the change and
+  the repair supervisor was a claim about a whole run**, and a test reading a run's end state cannot
+  say which stage produced what. A stage that stopped working would be a stage that fails silently
+  inside a pipeline still reaching its next gate.
 
-  | file | what it holds this repository to |
-  |---|---|
-  | file | what it holds this repository to |
+  So the real tier is split the way a failure is cheapest to find: **one file per stage, each
+  proving that stage alone against a real model and a real clone, and then the handovers in pairs.**
+  A defect inside one agent's contract is minutes against a whole run's tens of minutes, and the
+  pair files cover the seams the isolated ones cannot see — that a real `Requirements` is
+  something a real QA analyst accepts, and that nothing the first stage said is contradicted by the
+  second.
+
+  | the default suite, no network and no credential | what it holds this repository to |
   |---|---|
   | `test_a_run_from_a_request_to_a_delivery.py` | a run from a sentence to a delivery, and both repairs walked end to end |
   | `test_what_two_real_runs_found.py` | the defects two real runs found, and the inspections that carry the code now |
@@ -590,23 +601,39 @@ Stated rather than left to be discovered.
   | `test_the_tag_this_system_leaves_on_what_it_writes.py` | every issue and pull request carries the project's full name, or still goes out untagged |
   | `test_whether_anything_observed_the_change.py` | the rule that catches a change nothing observed, and its one gap |
   | `test_a_real_model_judging_a_real_refusal.py` | a real model's judgement inside a real graph; skips loudly without a credential |
-  | `test_the_readme_names_what_this_repository_holds_itself_to.py` | that this table names every test file, which it twice did not |
+  | `test_the_readme_names_what_this_repository_holds_itself_to.py` | that these tables name every test file, which this repository has now got wrong three times |
   | `test_the_tag_reaching_real_github.py` | that the tag is on a real issue and not only in a payload; files one and closes it — it found the pull-request bug |
   | `test_work_already_tracked_is_not_proposed_again.py` | that a briefing reads the repository's open issues, and that filing refuses a duplicate before anything is opened |
+  | `test_the_default_suite_reads_no_deployment_file.py` | that importing the real tier loads no `.env`, which is the claim `gate.yml` makes in a comment and a real run made false |
+  | `test_a_field_of_whitespace_is_absence.py` | that a field holding `" "` is neither an answer nor an absence, asked of every field of the three artifacts that share the rule |
+  | `test_a_file_a_plan_brings_into_being_is_committed.py` | that a file a plan creates is in the commit the delivery pushes, asked of `git show` and not of the arguments |
+  | `test_a_plan_that_adds_a_file_is_a_plan.py` | that a plan whose whole content is a new file is a plan, and that its refusal names every field it can be empty of |
+  | `test_a_test_at_the_repository_root_is_judged_too.py` | that a test at the repository root is judged by the runner's own `include` lines like any other directory |
+  | `test_the_tables_are_read_rather_than_kept_up_to_date.py` | that the two tables above are read rather than trusted — and the third count this repository let go stale |
 
-  The engine's own suite is where the per-agent contracts are proven, and it still exists in
-  `ai-sdlc-os`. **Four of these eight did not exist a week ago**, and three of them exist because a
-  check this repository had written could not have failed.
+  | the real tier, a real model and a real repository, opt-in with `-m e2e` | what it holds this repository to |
+  |---|---|
+  | `test_discovery.py` | that a real model reads a real repository, and that every path a report names is a file the clone holds |
+  | `test_analyze_the_repository.py` | that a real analyst answers a real request, and that every ambiguity says who can settle it |
+  | `test_analyze_the_requirements.py` | that a real QA plan is built from approved requirements and names no file in a repository it was never shown |
+  | `test_analyze_the_architecture.py` | that every package a report claims at a named version is in the manifest, and that a module list is a judgement nothing here can grade |
+  | `test_inspect_for_security_risk.py` | that no finding's evidence is a file the run never saw, and that every finding is weighed on all five of its fields |
+  | `test_plan_the_change.py` | that a real plan names only paths the clone holds or is allowed to create, in a directory the suite collects |
+  | `test_implement_the_plan.py` | that a real model's change lands on the disk holding exactly what it proposed, and that nothing outside the plan was written |
+  | `test_apply_the_plan.py` | that the change is committed under the agent's name, the suite is asked on both sides, and a change nothing observed is refused |
+  | `test_supervise_a_repair.py` | that a real model's verdict names a node the compiled graph actually has, and that the run did not die of the wiring |
+  | `test_review_an_artifact.py` | that a real model's decision is signed `autopilot:<policy>` and never as a person, at the version that was presented |
+  | `test_brief_this_repository.py` | that every opportunity cites a file the clone holds, and that the run's own judgement is not the type's default |
+  | `test_propose_the_work_this_repository_shows.py` | that a proposed request carries no address, and that a title without a body is refused |
 
-  **And the table is checked rather than trusted**, by the last row of it. The tag feature landed
-  with eleven tests and a commit message describing a README section that was never written — the
-  edit anchored on a heading belonging to another repository, so it silently did nothing, and the
-  commit passed because an unrelated line in the same edit did land. Two days later this table
-  still said "four test files" when there were six. Both times a count went stale and nothing
-  noticed, so a test now compares the files on disk against the names here and fails on either
-  difference.
+  **And the table is checked rather than trusted**, by that last row. The tag feature landed with
+  eleven tests and a commit message describing a README section that was never written — the edit
+  anchored on a heading belonging to another repository, so it silently did nothing, and the commit
+  passed because an unrelated line in the same edit did land. Two days later this table still said
+  "four test files" when there were six. **Both times a count went stale and nothing noticed, and
+  the third time the table said the per-agent contracts were unprovable here four days after a tier
+  that proves them landed.**
 - **The quality gates the engine was built under.** Strict TDD, the readability guards, the
   glossary guard, the per-cycle commit discipline, `mypy --strict`, the e2e and container tiers.
-  This repository was assembled for speed and carries one test, `ruff`, and a non-strict `mypy`.
-  That is a real trade: the engine's safeguards are not reproduced here, and the engine is where
-  they still run.
+  This repository was assembled for speed and carries `ruff` and a non-strict `mypy`. That is a real
+  trade: the engine's safeguards are not reproduced here, and the engine is where they still run.

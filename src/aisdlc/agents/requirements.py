@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, model_validator
 
-from aisdlc.agents.a_value_that_says_something import a_value_that_says_something
+from aisdlc.agents.a_value_that_says_something import a_value_that_says_something, as_absence
 from aisdlc.agents.requirements_answer import AnAmbiguity
 
 THE_PRODUCT_ANALYST_AGENT = "aisdlc-po-analyze"
@@ -45,6 +45,21 @@ class Requirements(BaseModel):
             self.acceptance_criteria,
             self.ambiguities,
         )
+
+    @model_validator(mode="after")
+    def a_field_that_said_nothing_is_absence(self) -> Requirements:
+        """A field holding whitespace becomes the absence this system already represents.
+
+        **The same rule as the other two artifacts, and it is here because the rule is the
+        rule.** A real model answered the QA plan with a `test_strategy` of one space, and the
+        emptiness check asked whether the *plan* said anything rather than whether each field
+        did — so a collection of real requirements carried a blank acceptance criterion into a
+        gate. Fixing that one shape would have been a third fix in this repository made where
+        the bug was found rather than where the rule is.
+        """
+        for a_field in type(self).model_fields:
+            setattr(self, a_field, as_absence(getattr(self, a_field)))
+        return self
 
     @model_validator(mode="after")
     def it_must_propose_something(self) -> Requirements:

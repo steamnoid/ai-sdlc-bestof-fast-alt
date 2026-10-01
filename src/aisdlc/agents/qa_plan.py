@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, model_validator
 
-from aisdlc.agents.a_value_that_says_something import a_value_that_says_something
+from aisdlc.agents.a_value_that_says_something import a_value_that_says_something, as_absence
 
 THE_QA_ANALYST_AGENT = "aisdlc-qa-analyze"
 
@@ -46,6 +46,25 @@ class QaPlan(BaseModel):
             self.edge_cases,
             self.regression_risks,
         )
+
+    @model_validator(mode="after")
+    def a_field_that_said_nothing_is_absence(self) -> QaPlan:
+        """A field holding whitespace becomes the absence this system already represents.
+
+        **Before the emptiness check, and that order is the finding.** A real model answered
+        with `test_strategy` set to a single space. The check below asks whether the plan says
+        *anything at all*, and it did — the scenarios were real — so the blank strategy passed
+        into a `QaPlan` that a gate presents to a person, where `" "` and a strategy are the
+        same characters on a card. `a_value_that_says_something` was right about the space the
+        whole time; nothing had asked it to act on that.
+
+        **Applied here rather than in the node**, because the node is one caller and the
+        artifact is what a gate reads. A normalising step in the node would be a step a fourth
+        caller could forget, which is how three artifacts came to hold a fourth `any()`.
+        """
+        for a_field in type(self).model_fields:
+            setattr(self, a_field, as_absence(getattr(self, a_field)))
+        return self
 
     @model_validator(mode="after")
     def it_must_propose_something_to_test(self) -> QaPlan:

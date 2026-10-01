@@ -49,6 +49,13 @@ aisdlc = "aisdlc.cli:aisdlc"
 
 [dependency-groups]
 dev = [
+    # `python-dotenv` is here for `tests/e2e/conftest.py` and nothing else. A developer has a
+    # `.env` and a deployment has real environment variables, and a library that read a
+    # dotfile from its own directory would behave differently depending on where it was
+    # imported from — so the loading belongs in the tier, not in `src/`. Without it the real
+    # tier skips with a message about an empty setting on a machine that has one on disk,
+    # which is a green run that proved nothing and said why in the least useful words.
+    "python-dotenv>=1.0",
     "pytest>=8.0",
     "pytest-asyncio>=1.0",
     "ruff>=0.16",
