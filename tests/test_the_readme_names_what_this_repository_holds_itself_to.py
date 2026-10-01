@@ -39,11 +39,7 @@ THE_TESTS = Path(__file__).resolve().parent
 
 
 def _the_test_files_that_exist() -> set[str]:
-    return {
-        a_file.name
-        for a_file in sorted(THE_TESTS.glob("test_*.py"))
-        if a_file.is_file()
-    }
+    return {a_file.name for a_file in sorted(THE_TESTS.rglob("test_*.py")) if a_file.is_file()}
 
 
 def _the_test_files_the_readme_names() -> set[str]:
@@ -108,7 +104,9 @@ def test_a_test_file_in_a_tier_of_its_own_is_a_test_file_this_repository_holds_i
     a_readme = tmp_path / "README.md"
     a_readme.write_text("`test_a_stage_against_a_real_model.py`", encoding="utf-8")
 
-    monkeypatch.setattr("tests.test_the_readme_names_what_this_repository_holds_itself_to.THE_TESTS", a_tier.parent)
+    monkeypatch.setattr(
+        "tests.test_the_readme_names_what_this_repository_holds_itself_to.THE_TESTS", a_tier.parent
+    )
     monkeypatch.setattr(
         "tests.test_the_readme_names_what_this_repository_holds_itself_to.THE_README", a_readme
     )
