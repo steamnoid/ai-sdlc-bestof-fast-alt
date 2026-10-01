@@ -80,10 +80,18 @@ THE_FIELDS_THE_PLAN_MAY_NAME = (
 # wrote *the inspection does not show whether the existing `.gitignore` already ignores
 # `e2e.db-wal`*, and that sentence is the whole of what was missing from a plan that shipped a
 # test asserting nothing.
+#
+# **The third was spelled `what_it_expectes_next` here, and a prompt string is not covered by a
+# type.** The model was asked for a field the tool schema it is bound to does not declare, so a
+# model obeying this prose would return a key `WhatAnAgentJudged` refuses — a `ValidationError`
+# spending a correction, or a dropped field. It survived because four other stages spell the same
+# field correctly and a real run's model followed the schema rather than the prose, which is luck
+# rather than correctness. `tests/test_every_field_a_stage_asks_for_is_a_field_the_answer_has.py`
+# now asks every stage, so a second copy of this mistake is a failure rather than a diff.
 THE_JUDGEMENTS_THE_PLAN_MAY_NAME = (
     "what_it_found",
     "what_it_could_not_settle",
-    "what_it_expectes_next",
+    "what_it_expects_next",
 )
 
 THE_ROOT_DIRECTORY = ""
