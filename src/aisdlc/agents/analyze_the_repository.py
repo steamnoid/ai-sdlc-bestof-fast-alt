@@ -34,7 +34,7 @@ from aisdlc.llm.correction_budget import (
 from aisdlc.llm.llm_configuration import a_configuration_from_the_environment
 from aisdlc.llm.model_factory import a_model_for
 from aisdlc.tools.github_clone_repository import ClonedRepository
-from aisdlc.tools.inspect_the_repository import an_inspection_of
+from aisdlc.tools.inspect_the_repository import an_inspection_of_the_code
 
 THE_FIELDS_THE_ANSWER_MAY_NAME = (
     "requirements",
@@ -159,8 +159,17 @@ def analyze_the_repository(
     nothing has usually been shown something too large to summarise and not refused the
     chance to say less. One correction is spent on telling it exactly that, and the run
     raises the refusal rather than returning a proposal nobody can approve.
+
+    **The inspection carries the file contents, and a run's policy refused this stage for the
+    opposite.** A real run produced requirements stating what `run_command.py` catches and
+    where the confinement is enforced, about a file the artifact itself recorded as never
+    having been opened — the policy compared the artifact against its own evidence list and
+    stopped the run. `an_inspection_of` was built for discovery, whose job is a repository's
+    shape, and the fix had been made for discovery without anyone checking the stages after
+    it. `tests/test_every_stage_reasoning_about_a_file_is_shown_it.py` now asks every stage
+    that reads a repository.
     """
-    inspection = an_inspection_of(clone)
+    inspection = an_inspection_of_the_code(clone)
     what_was_wrong: str | None = None
 
     began_at = time.monotonic()

@@ -51,7 +51,7 @@ from aisdlc.tools.filesystem_read import (
     the_path_inside_the_project,
 )
 from aisdlc.tools.github_clone_repository import ClonedRepository
-from aisdlc.tools.inspect_the_repository import an_inspection_of
+from aisdlc.tools.inspect_the_repository import an_inspection_of_the_code
 from aisdlc.tools.run_tests import what_the_suite_says_it_collects
 
 THE_DEVELOPER_PLANNING_AGENT = "aisdlc-dev-plan"
@@ -260,8 +260,17 @@ def plan_the_change(
     A run that exhausts the budget raises the *last* refusal. The caller needs the last thing
     that was wrong, because that is what a person can act on; three near-miss citations help
     nobody decide what to do next.
+
+    **The inspection carries the file contents, and this stage names paths from it.** A plan is
+    `files_to_change` — files that exist and are edited in place — so a planner shown only a
+    listing is choosing from filenames it has not read, and a real run refused a plan for
+    reasoning about a `Dockerfile` whose contents the plan itself said it had not seen.
+    `an_inspection_of` was built for discovery and the fix had been made for discovery without
+    anyone checking the stages after it;
+    `tests/test_every_stage_reasoning_about_a_file_is_shown_it.py` now asks every stage that
+    reads a repository.
     """
-    inspection = an_inspection_of(clone)
+    inspection = an_inspection_of_the_code(clone)
     what_was_wrong: str | None = None
     last: (
         APathNotAPathError
