@@ -39,6 +39,7 @@ from aisdlc.domain.work_item import a_work_item_commissioned_for_an_agent
 from aisdlc.store.what_a_run_records import the_work_item_was_commissioned
 from aisdlc.store.where_the_register_lives import holding_the_register
 from aisdlc.tools.github_list_open_issues import AnOpenIssue, the_issues_listed_as_tracked
+from aisdlc.tools.the_project_directory import where_projects_live
 
 # The name a filing is remembered under. **A hash of the opportunity's own words and not a
 # counter**, because a counter is a thing a retry has to carry and a hash is a thing it can be
@@ -150,6 +151,7 @@ def filing_what_the_briefing_found(
                     ),
                 ),
             ),
+            where_projects_live(),
         )
         _the_filing_was_remembered(what_was_filed, the_issue, the_work_item_id)
         the_work_item_ids.append(the_work_item_id)

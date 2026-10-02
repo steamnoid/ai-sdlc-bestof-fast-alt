@@ -269,7 +269,9 @@ def _the_node_a_problem_happened_in(a_problem: Exception) -> str | None:
     return None
 
 
-def a_work_item_for(repository: Repository, work_item_id: str, requested: object) -> WorkItem:
+def a_work_item_for(
+    repository: Repository, work_item_id: str, requested: object, projects_root: Path
+) -> WorkItem:
     """A commissioned work item, registered, so the board has a card before the run starts.
 
     **Registered before the first node runs, and not after.** A run's first act is to clone a
@@ -287,4 +289,4 @@ def a_work_item_for(repository: Repository, work_item_id: str, requested: object
         commissioned_by="a person in a browser",
         requested=requested,  # type: ignore[arg-type]
     )
-    return the_work_item_was_commissioned(the_work_item)
+    return the_work_item_was_commissioned(the_work_item, projects_root)

@@ -149,7 +149,8 @@ def test_a_work_item_commissioned_by_a_process_can_be_carried_on(an_empty_deploy
             accountable_role=Role.DEV,
             commissioned_by="a person in a terminal",
             requested=a_request_about("add a health endpoint", ""),
-        )
+        ),
+        Path(str(an_empty_deployment / "projects")),
     )
 
     the_resumed = a_resumed_run_of(

@@ -107,7 +107,8 @@ def run(
             accountable_role=_the_discipline_asked_for(),
             commissioned_by="a person in a terminal",
             requested=a_request_about(asked_for, any_more_detail),
-        )
+        ),
+        the_projects_root,
     )
     something_the_run_said(the_work_item_id, "a person asked for this")
 
