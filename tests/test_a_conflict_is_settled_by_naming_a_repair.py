@@ -39,6 +39,7 @@ from typing import Any
 import pytest
 from langgraph.types import Command
 
+from aisdlc.agents.pull_request_request import PullRequestRequest
 from aisdlc.agents.what_to_do_when_a_pull_request_will_not_merge import (
     AnAnswerThatIsNotADecisionError,
     WhatToDoAroundAConflict,
@@ -54,6 +55,7 @@ from aisdlc.graph.settle_a_conflict_node import settle_a_conflict_in_this_run
 from aisdlc.graph.suite_node import WHERE_THE_SUITE_IS_ASKED_ABOUT
 from aisdlc.tools.github_clone_repository import ClonedRepository
 from aisdlc.tools.github_create_pull_request import AnOpenedPullRequest
+from aisdlc.tools.our_own_runs import a_delivery_branch_named
 from aisdlc.tools.rebase_the_branch_a_run_pushed import WhatTheRebaseLanded
 
 WHERE_A_RUN_GOES_BACK_TO = WHERE_THE_SUITE_IS_ASKED_ABOUT
@@ -61,6 +63,7 @@ WHERE_A_RUN_IS_OVER = THE_RUN_IS_OVER
 
 THE_COMMIT_THE_CHECKS_WERE_READ_ABOUT = "b" * 40
 THE_COMMIT_THE_CLONE_STANDS_ON = "a" * 40
+THE_BRANCH_THE_DELIVERY_JOINS = "main"
 THE_CONFLICT_IN_GITHUBS_WORDS = (
     "GitHub says pull request 10 of paligakrzychu/wellbeing-tracker-public conflicts with the "
     "branch it would join, and it cannot be merged as it stands."
@@ -102,6 +105,26 @@ def _the_state_a_conflict_reaches_the_run_in() -> AgentState:
         opened_pull_request=AnOpenedPullRequest(  # type: ignore[typeddict-item]
             number=10, address="https://example.invalid/p/pull/10"
         ),
+        pull_request_request=_the_request_the_delivery_opened_it_with(),  # type: ignore[typeddict-item]
+    )
+
+
+def _the_request_the_delivery_opened_it_with() -> PullRequestRequest:
+    """What the delivery recorded when it opened the pull request, where both branches live.
+
+    **The branch is the one the delivery derived, not one written here.** `deliver_node` named it
+    and put it in the state, and this repair reads it back rather than deriving a third name — so a
+    test cannot pass by agreeing with itself about a branch the run never pushed.
+    """
+    work_item = _a_work_item_holding_a_delivery()
+
+    return PullRequestRequest(
+        repository=work_item.repository,
+        work_item_id=work_item.work_item_id,
+        branch=a_delivery_branch_named(work_item.work_item_id),
+        base=THE_BRANCH_THE_DELIVERY_JOINS,
+        title="add a health endpoint",
+        body="what changed and what was verified",
     )
 
 
@@ -184,9 +207,9 @@ def test_naming_the_rebase_rebases_the_branch_and_puts_the_run_back_to_the_suite
         f"the rebase was asked for {what_it_was_asked_with[0]!r} without the commit the branch is "
         "expected to be at. A lease of nothing moves whatever is there"
     )
-    assert "onto main" in what_it_was_asked_with[0], (
-        f"the rebase was asked for {what_it_was_asked_with[0]!r}, and the branch it joins is the "
-        "clone's own ref — the one the pull request would have joined"
+    assert f"onto {THE_BRANCH_THE_DELIVERY_JOINS}" in what_it_was_asked_with[0], (
+        f"the rebase was asked for {what_it_was_asked_with[0]!r} and not onto the branch the "
+        "delivery joined. Rebasing onto anything else is a delivery that ignored its own base"
     )
 
     assert where_it_went.goto == WHERE_A_RUN_GOES_BACK_TO, (
