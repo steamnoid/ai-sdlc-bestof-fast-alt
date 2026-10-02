@@ -699,10 +699,27 @@ def _wait_until_the_run_has_stopped_walking(
 
 
 def _wait_until_the_run_has_finished(the_board: TestClient, work_item_id: str) -> None:
-    """Wait for the run to stop asking, which is how both delivering and refusing end."""
+    """Wait for the run to **end**, which is how both delivering and refusing finish.
+
+    **On `how_it_ended`, and not on `the_question` being `None`.** That was the previous rule and
+    it was watching the wrong moment: a question stops being asked the instant the answer is
+    posted, which is *before* the run has done anything with it. So the wait returned while the
+    run was still working and the card still read `AWAITING_HUMAN_APPROVAL` — `the card is in
+    'to review' rather than delivered` on 3 runs in 30. A run that delivers does not stop asking;
+    it stops existing, and the API has said so all along in `how_it_ended`.
+
+    **And `is_still_working` is read as well, because a run can end without saying so.** A run
+    killed by a signal is `not still working` and has no ending sentence, so waiting only for the
+    sentence would hang on it until the ceiling. Both facts are asked for because neither alone
+    distinguishes *finished* from *stopped*, and this wait is used by tests asserting both.
+    """
+    def _how_the_run_has_ended() -> bool:
+        about_it = the_board.get(f"/api/runs/{work_item_id}").json()
+        return about_it["how_it_ended"] is not None or not about_it["is_still_working"]
+
     _wait_until(
-        lambda: the_board.get(f"/api/runs/{work_item_id}").json()["the_question"] is None,
-        f"{work_item_id} was still asking questions when the test gave up",
+        _how_the_run_has_ended,
+        f"{work_item_id} had neither ended nor stopped when the test gave up",
     )
 
 
