@@ -129,23 +129,23 @@ def _what_a_fixture_does_after_its_yield(a_definition: ast.FunctionDef) -> list[
 
 
 def _gives_the_environment_back(what_it_does_afterwards: list[ast.stmt]) -> bool:
-    """Whether these statements put the environment back — either a saved value, or a removal.
+    """Whether these statements put the environment back — a saved value, or a removal.
 
     **Two shapes and both are accepted**, because a variable that was absent before needs removing
     and a variable that was set needs restoring, and a fixture that handles only one of them is
     correct for half the deployments and wrong for the other half.
+
+    **Walked rather than read off the top, and that is the whole reason the first version of this
+    called a fixed fixture broken.** The restoring statements sit inside `for` loops — one per
+    variable — so a check that looked only at the statements themselves found none and reported a
+    fixture that had just been corrected as the one that was never right.
     """
     for a_statement in what_it_does_afterwards:
-        if not isinstance(a_statement, ast.Assign):
-            continue
-        for a_target in a_statement.targets:
-            if isinstance(a_target, ast.Subscript) and _is_the_environment(a_target.value):
-                return True
-
-    for a_statement in what_it_does_afterwards:
-        if not isinstance(a_statement, ast.If):
-            continue
         for a_nested in ast.walk(a_statement):
+            if isinstance(a_nested, ast.Assign):
+                for a_target in a_nested.targets:
+                    if isinstance(a_target, ast.Subscript) and _is_the_environment(a_target.value):
+                        return True
             if (
                 isinstance(a_nested, ast.Call)
                 and isinstance(a_nested.func, ast.Attribute)
