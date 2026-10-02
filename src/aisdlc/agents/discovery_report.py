@@ -7,7 +7,7 @@ from that table is a broken promise rather than a rename.
 
 from __future__ import annotations
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 from aisdlc.agents.a_value_that_says_something import a_value_that_says_something, as_absence
 from aisdlc.domain.repository import Repository
@@ -61,6 +61,60 @@ class DiscoveryReport(BaseModel):
     key_components: list[str] = []
     evidence_files: list[EvidenceFile] = []
     suggested_changes: list[str] = []
+
+    @field_validator("build_system")
+    @classmethod
+    def _refuse_a_tool_name_with_nothing_to_act_on(cls, what_was_written: str | None) -> str | None:
+        """A build system must say what the build runs on, and a bare tool's name is not that.
+
+        **Two real runs were refused at a gate over this field, and this is the rule they were
+        asking for.** Asked to declare which Node version a project requires, the discovery
+        report said `build_system: npm` — one word, and the shortest true one — while the same
+        report's `key_components` carried the Dockerfile pinning `node:22-bookworm` in two
+        `FROM` lines and its `architecture_summary` described the two-stage image in detail. The
+        refusal said the report *"never records the runtime floors that would bound an engines
+        range"*, and it was right, and it happened twice.
+
+        **The prompt now asks the better question; this is what stops the answer from being the
+        old one anyway.** A `str | None` accepts `npm` forever, and a type that accepts a bare
+        noun keeps receiving one however the question is worded. The question is a request and a
+        model may answer it briefly; this is the system saying what it is willing to accept.
+
+        **Only this field, and the reason is the shape of the answer rather than a preference.**
+        A one-word `languages` entry is a language, and a one-word `key_components` entry is a
+        path. A build system's whole content is a version and the runtime carrying it, so a short
+        answer there is a missing one rather than a terse one.
+
+        **Absent is untouched.** A repository with no build system says so with `None` and the
+        question tells the model to leave the field out rather than guess. Refusing `None` would
+        force an invention for a repository that genuinely has none.
+
+        **A build system named in words is enough when there are no versions to name.** `make`,
+        `cargo` and a plain `npm` in a repository that pins nothing anywhere are the honest
+        answers for repositories that declare no version, and this refuses a bare noun only when
+        it stands alone as the entire answer.
+        """
+        if what_was_written is None:
+            return None
+
+        said = what_was_written.strip()
+        if not said:
+            return said
+
+        names_more_than_the_tool = any(
+            a_character.isdigit() or a_character in "/@ " for a_character in said
+        )
+        if not names_more_than_the_tool:
+            raise ValueError(
+                f"build_system is {what_was_written!r}, which names a tool and nothing else. This "
+                "field answers what the build *runs on* — the command, and the runtime or image "
+                "and version it pins when the repository declares one — because a person at a gate "
+                "cannot rule on a change about a required runtime while holding a report that says "
+                "only which tool. A repository that declares no version is not this case: name the "
+                "command and, if there is one, the runtime."
+            )
+
+        return said
 
     def everything_it_says(self) -> tuple[object, ...]:
         """Every field's value, in the order the glossary lists them."""
