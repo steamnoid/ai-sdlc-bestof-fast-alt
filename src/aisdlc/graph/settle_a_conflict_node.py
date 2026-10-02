@@ -73,22 +73,48 @@ def settle_a_conflict_in_this_run(
     )
 
     if the_decision.the_repair is WhatToDoWhenThePullRequestWillNotMerge.REBASE_IT_AND_TRY_AGAIN:
-        return _a_rebase_is_taken(state, rebase_the_branch)
+        return _a_rebase_is_taken(state, rebase_the_branch, the_decision.why)
 
     return _it_is_left_open(the_conflict_as_it_was_refused, the_decision.why)
 
 
-def _a_rebase_is_taken(state: AgentState, rebase_the_branch: RebaseTheBranchARunPushed) -> Command:
-    """Replay the branch on what was fetched, and ask about the suite again.
+def _a_rebase_is_taken(
+    state: AgentState, rebase_the_branch: RebaseTheBranchARunPushed, the_grounds: str
+) -> Command:
+    """Replay the branch on what was fetched, ask about the suite again, and write down why.
 
-    **No state is written here, and that is the argument rather than an omission.** The suite
-    node is the only writer of `the_commit_anything_proved` — it overwrites the field with the head
-    GitHub reports — so writing it here as well would be a second mechanism for one fact, and the
-    two could disagree about which commit the checks were about.
+    **The card is written on this branch too, and a real model is what showed it was missing.**
+    Asked which repair to take, `space-bunny-free` named the rebase and said why — and the run
+    rebased and wrote nothing. **The branch where the run does something was the branch that kept
+    no record of why it did it**, and the branch that stops wrote a paragraph. Every other verdict
+    in this package carries its grounds for the reason `ApprovalDecision.reason` is required, and
+    this was the only one whose grounds were assumed to travel with it.
+
+    **What is written is the grounds and nothing about the commit.** `the_commit_anything_proved`
+    is the suite node's to write — it overwrites the field with the head GitHub reports — so
+    writing it here as well would be a second mechanism for one fact, and the two could disagree
+    about which commit the checks were about.
     """
     rebase_the_branch(*_the_rebase_this_run_is_asking_for(state))
 
-    return Command(goto=WHERE_THE_SUITE_IS_ASKED_ABOUT)
+    return Command(
+        goto=WHERE_THE_SUITE_IS_ASKED_ABOUT,
+        update={"what_stopped_this_run": _why_this_run_rebased(the_grounds)},
+    )
+
+
+def _why_this_run_rebased(the_grounds: str) -> str:
+    """What the card says about a repair that is going to be taken and is not the end of a run.
+
+    **The same channel the stopping branch uses, and the reason is that it is a note rather than a
+    verdict.** `what_stopped_this_run` is what a reader asks to find out why a run did what it
+    did, and a rebase stops nothing — so the sentence says what was decided rather than claiming
+    the run ended. **A second channel for it would make two places a person looks**, and the whole
+    of what makes a note readable is that there is one.
+    """
+    return (
+        f"This run chose to rebase the branch and try the merge again. Its grounds: {the_grounds}"
+    )
 
 
 def _it_is_left_open(the_conflict_as_it_was_refused: str, the_grounds: str) -> Command:
