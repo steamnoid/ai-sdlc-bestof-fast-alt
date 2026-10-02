@@ -13,3 +13,6 @@ aisdlc-projects/
 dist/
 htmlcov/
 target/
+
+# Mój notatnik: lokalny, nigdy nie commitowany.
+MOJE-NOTATKI.md

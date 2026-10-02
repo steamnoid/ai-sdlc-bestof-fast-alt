@@ -35,6 +35,7 @@ import time
 from langchain_core.language_models.chat_models import BaseChatModel
 from pydantic import ValidationError
 
+from aisdlc.agents.how_to_name_a_file import the_rule_about_naming_a_file
 from aisdlc.agents.implementation_plan import EmptyPlanError, ImplementationPlan
 from aisdlc.agents.requirements import Requirements
 from aisdlc.agents.requirements_answer import AnAmbiguity
@@ -232,6 +233,7 @@ def the_prompt_to_plan_a_change(
         "\n"
         f"Inspection of {repository.owner}/{repository.name}:\n"
         f"{inspection}"
+        + the_rule_about_naming_a_file()
     )
 
 
