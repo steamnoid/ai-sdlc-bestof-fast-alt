@@ -76,6 +76,15 @@ from aisdlc.web.the_api import the_api_over
 A_REPOSITORY = Repository(owner="pikuniu", name="a-project")
 A_MOMENT = datetime(2026, 9, 30, 12, 0, tzinfo=UTC)
 HOW_LONG_A_SMOKE_MAY_WAIT_IN_SECONDS = 30.0
+HOW_MANY_TIMES_A_BOARD_MAY_BE_BUSY = 20
+"""How many times this test asks again while the board is still walking from the previous gate.
+
+**Twenty, and the number is about the ceiling rather than the patience.** A run between two gates
+with no model in it is fast, and this test uses faked agents — so a run that is still busy after
+twenty re-reads is not busy, it is broken, and the test says so rather than waiting longer. The
+alternative is a fixed sleep, which is either too short and fails for having been impatient or too
+long and is paid on every run.
+"""
 
 
 # ---------------------------------------------------------------------------
@@ -373,19 +382,15 @@ def test_a_run_started_from_the_board_reaches_delivered(
         )
 
         already_answered: set[str] = set()
-        for gate in range(1, _how_many_gates_there_are() + 1):
-            question = _wait_until_the_gate_is_asking(the_board, the_work_item_id, already_answered)
-            already_answered.add(question["artifact_id"])
-
-            answered = the_board.post(
-                f"/api/runs/{the_work_item_id}/decisions",
-                json={
-                    "approved": True,
-                    "decided_by": "pikuniu",
-                    "reason": "it answers the request",
-                },
+        for _gate in range(1, _how_many_gates_there_are() + 1):
+            _answer_the_gate_now_showing(
+                the_board,
+                the_runs,
+                the_work_item_id,
+                already_answered,
+                True,
+                "it answers the request",
             )
-            assert answered.status_code == 200, f"gate {gate} refused the answer: {answered.text}"
 
         _wait_until_the_run_has_finished(the_board, the_work_item_id)
 
@@ -457,37 +462,24 @@ def test_a_refusal_ends_a_run_and_leaves_the_reason_on_the_card(
         )
         the_work_item_id = started.json()["work_item_id"]
 
-        _wait_until_the_gate_is_asking(the_board, the_work_item_id, set())
-        the_board.post(
-            f"/api/runs/{the_work_item_id}/decisions",
-            json={"approved": True, "decided_by": "pikuniu", "reason": "it is right"},
-        )
-
         # **The set of gates this test has answered, and not the set the record holds.** The
         # record is written by the run's own thread, so a set read from it at the moment of the
         # wait can be a gate behind: the answer was posted and the run has not recorded it yet,
-        # so the set is empty, the pending question is gate one, and the wait returns at once on
-        # a question the run is about to clear. The test knows what it posted, and that is a
-        # fact about the test rather than a fact about a race.
+        # so the pending question is still gate one and the wait returns at once on a question the
+        # run is about to clear. The test knows what it posted, and that is a fact about the test
+        # rather than a fact about a race.
         already_answered: set[str] = set()
-        first = _wait_until_the_gate_is_asking(the_board, the_work_item_id, already_answered)
-        already_answered.add(first["artifact_id"])
-        the_board.post(
-            f"/api/runs/{the_work_item_id}/decisions",
-            json={"approved": True, "decided_by": "pikuniu", "reason": "it is right"},
-        )
 
-        _wait_until_the_gate_is_asking(the_board, the_work_item_id, already_answered)
-        refused = the_board.post(
-            f"/api/runs/{the_work_item_id}/decisions",
-            json={
-                "approved": False,
-                "decided_by": "pikuniu",
-                "reason": "that is not the change I meant to ask for",
-            },
+        _answer_the_gate_now_showing(
+            the_board, the_runs, the_work_item_id, already_answered, True, "it is right"
         )
-        assert refused.status_code == 200, (
-            f"a refusal is a completed gate, not an error: {refused.text}"
+        _answer_the_gate_now_showing(
+            the_board,
+            the_runs,
+            the_work_item_id,
+            already_answered,
+            False,
+            "that is not the change I meant to ask for",
         )
 
         # **Wait for the refusal to reach the record, rather than reading on the strength of the
@@ -608,6 +600,60 @@ def _how_many_gates_there_are() -> int:
     return len(WHERE_AN_APPROVED_ARTIFACT_LEADS)
 
 
+def _answer_the_gate_now_showing(
+    the_board: TestClient,
+    the_runs: TheRunsThisProcessIsHolding,
+    work_item_id: str,
+    already_answered: set[str],
+    approved: bool,
+    why: str,
+) -> None:
+    """Wait for the next gate and answer it once, remembering which gate that was.
+
+    **The wait and the POST are one function because the gap between them is the whole defect,
+    and this file had it twice.** The board clears a question *after* this endpoint's response
+    has gone back, so a caller that waits and then posts can read gate one, post for gate one, and
+    — the next wait, holding a set that does not yet contain gate one — read gate one again and
+    post for it a second time. That second post lands on gate two. The record then holds three
+    decisions for a two-gate run, and an assertion about what a refusal leaves behind fails on a
+    run that behaved perfectly. One of these tests did exactly that, and the other did the mirror
+    of it.
+
+    **A 409 is answered by asking again, and that is a person pressing the button twice.** The
+    board refuses an answer to a run still walking from the previous gate, which is right: a
+    second click that appeared to work and silently did nothing is worse than one that says why
+    not. So the answer is to do what a reader does — wait for the run to come back to rest, and
+    ask again — bounded, because a run between two gates with faked agents is fast and a busier
+    one than this needs a different mechanism rather than a longer wait.
+
+    **Only while the same question is still on the table.** A 409 with a different question
+    pending means the run moved past the gate this test meant to answer, and asking again would
+    answer the wrong gate.
+    """
+    a_question = _wait_until_the_gate_is_asking(the_board, work_item_id, already_answered)
+    already_answered.add(a_question["artifact_id"])
+    the_answer = {"approved": approved, "decided_by": "pikuniu", "reason": why}
+
+    for _attempt in range(HOW_MANY_TIMES_A_BOARD_MAY_BE_BUSY + 1):
+        answered = the_board.post(f"/api/runs/{work_item_id}/decisions", json=the_answer)
+        if answered.status_code == 200:
+            return
+        if answered.status_code != 409:
+            pytest.fail(
+                f"answering {a_question['artifact_id']} was refused with "
+                f"{answered.status_code}: {answered.text}. A refusal is a completed gate, not an "
+                "error"
+            )
+        _wait_until_the_run_has_stopped_walking(the_runs, work_item_id)
+
+    pytest.fail(
+        f"the board was busy for {HOW_MANY_TIMES_A_BOARD_MAY_BE_BUSY} attempts and "
+        f"{a_question['artifact_id']} was never answered. The board answers 409 while a run is "
+        "still walking from the previous gate, and this test answers each gate exactly once, so a "
+        "busier run than this needs a different mechanism rather than a longer wait"
+    )
+
+
 def _wait_until_the_gate_is_asking(
     the_board: TestClient, work_item_id: str, already_answered: set[str]
 ) -> dict[str, object]:
@@ -634,6 +680,22 @@ def _a_question_nobody_has_answered(
     if the_question is None or the_question["artifact_id"] in already_answered:
         return None
     return the_question
+
+
+def _wait_until_the_run_has_stopped_walking(
+    the_runs: TheRunsThisProcessIsHolding, work_item_id: str
+) -> None:
+    """Wait until this run is parked at a gate rather than walking towards one.
+
+    **Asked of the holder and not of the board**, because the board's question is cleared after
+    the answer is posted and is therefore empty during exactly the window this waits for, while
+    the holder still knows. `is_this_run_still_walking` is the same fact the board's 409 is raised
+    from, so waiting on it cannot disagree with the thing being waited for.
+    """
+    _wait_until(
+        lambda: not the_runs.is_this_run_still_walking(work_item_id),
+        f"{work_item_id} never stopped walking, so the board kept refusing every answer",
+    )
 
 
 def _wait_until_the_run_has_finished(the_board: TestClient, work_item_id: str) -> None:
