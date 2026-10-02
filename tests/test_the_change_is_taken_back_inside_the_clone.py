@@ -56,6 +56,19 @@ def _git(where: Path, *words: str) -> None:
     subprocess.run(["git", *words], cwd=where, check=True, capture_output=True)
 
 
+def _a_repository_that_can_commit(where: Path) -> None:
+    """Give a repository an identity, because committing needs one and a machine may have none.
+
+    **This was found by CI and not here.** `git clone` does not carry a local identity across, so
+    the clone's `git commit` was left with no `user.name` and no `user.email` — and it exited 128
+    on the runner while passing on the machine that ran it, because that machine had a global
+    identity. A test that needs somebody's git configuration to pass is a test that reports the
+    machine rather than the code, so every repository here is given its own.
+    """
+    _git(where, "config", "user.email", "a-person@example.com")
+    _git(where, "config", "user.name", "a person")
+
+
 def _an_origin_with_one_version_of_the_file(where: Path) -> Path:
     """A real git repository with one commit putting one file on disk.
 
@@ -65,8 +78,7 @@ def _an_origin_with_one_version_of_the_file(where: Path) -> Path:
     """
     (where / ".github" / "workflows").mkdir(parents=True)
     _git(where, "init", "--quiet", "--initial-branch=main")
-    _git(where, "config", "user.email", "a-person@example.com")
-    _git(where, "config", "user.name", "a person")
+    _a_repository_that_can_commit(where)
     (where / THE_FILE).write_text(THE_FIRST_VERSION)
     _git(where, "add", "--", THE_FILE)
     _git(where, "commit", "--quiet", "-m", "the first version")
@@ -83,8 +95,7 @@ def _a_repository_standing_here_and_nothing_to_do_with_the_clone(where: Path) ->
     """
     where.mkdir(parents=True)
     _git(where, "init", "--quiet", "--initial-branch=main")
-    _git(where, "config", "user.email", "a-person@example.com")
-    _git(where, "config", "user.name", "a person")
+    _a_repository_that_can_commit(where)
     (where / "a-file-that-does-not-matter").write_text("a person was here first\n")
     _git(where, "add", "--", "a-file-that-does-not-matter")
     _git(where, "commit", "--quiet", "-m", "the repository this process stands in")
@@ -98,6 +109,7 @@ def test_the_change_is_taken_back_inside_the_clone_and_not_where_the_process_sta
     _an_origin_with_one_version_of_the_file(tmp_path / "the-origin")
     the_clone = tmp_path / "the-clone"
     _git(tmp_path, "clone", "--quiet", str(tmp_path / "the-origin"), str(the_clone))
+    _a_repository_that_can_commit(the_clone)
     (the_clone / THE_FILE).write_text(THE_CHANGE)
     _git(the_clone, "add", "--", THE_FILE)
     _git(the_clone, "commit", "--quiet", "-m", "the change")
