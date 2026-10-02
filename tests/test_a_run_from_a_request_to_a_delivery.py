@@ -57,7 +57,11 @@ from aisdlc.domain.stage import Stage
 from aisdlc.domain.work_item import a_work_item_commissioned_for_an_agent
 from aisdlc.graph.lifecycle import a_config, the_lifecycle
 from aisdlc.graph.router import WHERE_AN_APPROVED_ARTIFACT_LEADS
-from aisdlc.graph.supervise_a_repair import WHERE_THE_IMPLEMENTATION_IS_REWRITTEN
+from aisdlc.graph.supervise_a_repair import (
+    WHERE_THE_IMPLEMENTATION_IS_REWRITTEN,
+    WHERE_THE_PLAN_IS_REWRITTEN,
+    ARepairThatOnlyAGateMayDecideError,
+)
 from aisdlc.graph.the_agents_this_run import TheAgentsThisRun
 from aisdlc.graph.the_delivery_of_this_run import TheDeliveryOfThisRun
 from aisdlc.store.the_board_reads import AColumnOfTheBoard
@@ -71,6 +75,7 @@ from aisdlc.tools.github_clone_repository import RepositoryToClone
 from aisdlc.tools.github_create_branch import PushedBranch
 from aisdlc.tools.github_create_pull_request import AnOpenedPullRequest
 from aisdlc.tools.run_tests import SuiteOutcome
+from aisdlc.verify_the_change import AnUnrunTestError
 from aisdlc.web.the_api import the_api_over
 
 A_REPOSITORY = Repository(owner="pikuniu", name="a-project")
@@ -278,6 +283,124 @@ def _the_agents_no_model_would_produce() -> TheAgentsThisRun:
         plan=plan,
         apply_and_verify=apply_and_verify,
         supervise=supervise,
+    )
+
+
+def test_a_run_sent_back_to_the_planner_stops_with_a_reason_and_not_a_traceback(
+    a_repository_to_clone_into: Path, a_register_and_a_projects_root
+) -> None:
+    """The supervisor's planner route ends the run with a sentence, not a `StateMachineError`.
+
+    **This is the second half of what the repair supervisor is for, and it cannot execute.**
+    `WhereTheRunShouldStartAgain` has two values. `WHERE_THE_IMPLEMENTATION_IS_REWRITTEN` sends
+    the run to the agent that is already holding the work item, so nothing is handed over and the
+    move is legal — which is why both other repair tests pass. `WHERE_THE_PLAN_IS_REWRITTEN` sends
+    it to `offer_the_work_item_to_the_planner`, which asks for `AWAITING_AGENT_PICKUP` naming
+    `aisdlc-dev-plan`, and the item at that moment is held by `aisdlc-dev-impl`. `transition()`
+    refuses a hand-over between two agents:
+
+        StateMachineError: aisdlc-dev-impl holds this work item and cannot hand it to
+        aisdlc-dev-plan; a work item is released to a human, not to another agent
+
+    **This is not a theory about the code; it is the output of a real run.** Run 13 passed six
+    gates, the implementer wrote and committed two files, and the suite came back **green without
+    the change** — 81 passed, 9 skipped, with `ci.yml` checked back out to `HEAD~1`. That is the
+    refusal `a test that passed without the change` exists for, so the supervisor was asked to
+    rule on it, and it ruled *plan it again*. The run died on the `StateMachineError` above with
+    the whole pipeline behind it and no pull request in front of it.
+
+    **And no guard in this repository could have seen it.** `test_dangling_gotos_in_the_graph`
+    reads the `goto` literals and checks them against the compiled graph, which is a real guard
+    and is green: `offer_the_work_item_to_the_planner` does exist. What nothing asked is **which
+    stage the work item is at when that node runs** — and a node that exists and cannot be
+    reached from where the run actually stands is the exact shape that guard exists for and
+    cannot see.
+
+    **What this test demands is deliberately narrower than a fix.** A work item is released to a
+    human and not to a peer; that is the single-writer rule and it is not being weakened for a
+    convenience. The only edge out of `IN_PROGRESS_BY_AGENT` to a stage nobody holds is
+    `AWAITING_HUMAN_APPROVAL`, so *where this route should go* is a decision about the
+    specification and this test does not make it. What is missing either way, and what this
+    demands, is that a run which hits this stops with a sentence naming both agents and the move
+    that was allowed instead — because a `StateMachineError` traceback reports a block with no way
+    through it, and tells a reader that something about agents is broken rather than which
+    hand-over was asked for.
+    """
+    _, the_projects_root = a_register_and_a_projects_root
+    os.environ["AISDLC_PROJECTS_DIR"] = str(the_projects_root)
+
+    def a_supervisor_that_says_plan_it_again(
+        work_item, projects_root: Path, what_the_run_stopped_on
+    ) -> Command:
+        """The supervisor run 13 was given: a verdict, and the place to start again.
+
+        **A `Command` in the shape the real one has, because the shape is the subject.** A
+        supervisor returning a dictionary, or naming a stage instead of a node, would be testing
+        something else: the defect is that the `goto` and the stage the run stands at cannot both
+        be satisfied.
+        """
+        return Command(
+            goto=WHERE_THE_PLAN_IS_REWRITTEN,
+            update={"repair": "the suite passed without the change, so the plan is wrong"},
+        )
+
+    def an_apply_that_refuses_with_a_name_the_node_hands_on(
+        clone, repository, implementation_plan
+    ) -> ADeliveredChange:
+        """Raise `AnUnrunTestError`, which is one of the three names `apply_node` hands on.
+
+        **Raising the name rather than producing the condition, because the condition needs a
+        suite and the default suite runs no containers.** `AnUnrunTestError` is raised by
+        `verify_the_change` when the suite is green and never ran the tests the plan named — a
+        verdict derived from the suite's own output. This double declares the same refusal, and
+        what is under test is the node's `except` clause and not the arithmetic that reaches it.
+
+        **And it matters which node refuses.** `ASuiteThatWentRedIsNotADeliveryError` is raised
+        by `deliver_node`, by which time the work item has been released to the gate and routing
+        back to the planner is legal. These three names are raised by `apply_node`, while
+        `aisdlc-dev-impl` still holds the item — which is the only shape in which the supervisor's
+        planner route is refused, and the shape run 13 hit.
+        """
+        raise AnUnrunTestError(
+            "The suite passed and never ran 1 of the 1 test(s) this approved plan said the "
+            "change adds: test_health.py."
+        )
+
+    working_agents = _the_agents_no_model_would_produce()
+    the_graph = the_lifecycle(
+        agents=TheAgentsThisRun(
+            **{
+                **working_agents.__dict__,
+                "apply_and_verify": an_apply_that_refuses_with_a_name_the_node_hands_on,
+                "supervise": a_supervisor_that_says_plan_it_again,
+            }
+        ),
+        delivery=_a_delivery_that_only_writes_down(a_repository_to_clone_into),
+        plan_the_clone=_cloning_from_a_local_repository(a_repository_to_clone_into),
+    )
+
+    the_work_item = a_work_item_commissioned_for_an_agent(
+        work_item_id="a-run-stopped-where-the-supervisor-sends-it-back-to-the-planner",
+        repository=Repository(owner="an", name="owner"),
+        accountable_role=Role.DEV,
+        commissioned_by="a person reading a test",
+        requested=a_request_about("add a health endpoint", ""),
+    )
+    with holding_the_register() as register:
+        the_work_item_a_commission_registers(register, the_work_item)
+
+    with pytest.raises(ARepairThatOnlyAGateMayDecideError) as it_raised:
+        _walk_the_run_to_the_end(the_graph, the_work_item, the_projects_root, [])
+
+    said_so = str(it_raised.value)
+
+    assert "aisdlc-dev-impl" in said_so and "aisdlc-dev-plan" in said_so, (
+        f"the refusal does not name both agents, so a reader cannot tell which hand-over was "
+        f"refused: {said_so}"
+    )
+    assert "AWAITING_HUMAN_APPROVAL" in said_so, (
+        f"the refusal does not name the move the state machine would have allowed, so it reports "
+        f"a block without offering a way through it: {said_so}"
     )
 
 

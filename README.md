@@ -594,7 +594,7 @@ Stated rather than left to be discovered.
 
   | the default suite, no network and no credential | what it holds this repository to |
   |---|---|
-  | `test_a_run_from_a_request_to_a_delivery.py` | a run from a sentence to a delivery, and both repairs walked end to end |
+  | `test_a_run_from_a_request_to_a_delivery.py` | a run from a sentence to a delivery, both repairs walked end to end, and the supervisor's planner route ending a run with a sentence rather than a `StateMachineError` |
   | `test_what_two_real_runs_found.py` | the defects two real runs found, and the inspections that carry the code now |
   | `test_the_supervisor_deciding_what_to_repeat.py` | every refusal routes to the supervisor, and no node chooses a destination *and* carries an edge |
   | `test_a_repository_briefing_itself.py` | a repository briefs itself, and filing is refused without a credential |
@@ -931,3 +931,54 @@ nothing here to fix, and a rule that looked like a fix would be a regression wea
 a request until proven otherwise, and eleven of the twelve refusals this deployment produced were
 about the requests. The two that were about the code — the supervisor's `ValidationError` and the
 checkout that ran in the wrong repository — are the two that were worth a cycle each.
+
+---
+
+## The repair loop cannot put a run back with the planner, and nothing could see it
+
+Run 13 got further than run 11 in one way and stopped in another. Six gates passed, the
+implementer wrote and committed two files, and then the suite came back **green without the
+change** — 81 passed, 9 skipped, with `ci.yml` checked back out to `HEAD~1`. That is the refusal
+`a test that passed without the change` exists for, so the supervisor was asked to rule on it.
+It ruled *plan it again*. And the run died immediately:
+
+```
+StateMachineError: aisdlc-dev-impl holds this work item and cannot hand it to aisdlc-dev-plan;
+a work item is released to a human, not to another agent
+```
+
+**Half of what the repair supervisor is for cannot execute.** `WhereTheRunShouldStartAgain` has
+two values. `WHERE_THE_IMPLEMENTATION_IS_REWRITTEN` sends the run to the agent *already holding*
+the work item, so nothing is handed over and the move is legal — which is why both existing
+repair tests pass. `WHERE_THE_PLAN_IS_REWRITTEN` sends it to
+`offer_the_work_item_to_the_planner`, which asks for `AWAITING_AGENT_PICKUP` naming
+`aisdlc-dev-plan` while the item is held by `aisdlc-dev-impl`. The transition table allows that
+edge **by stage**; the single-writer rule refuses it **by agent**; and the two rules have never
+been asked about the same move at the same time.
+
+**Which node refuses is the whole distinction.** `ASuiteThatWentRedIsNotADeliveryError` comes
+from `deliver_node`, by which time the item has been released to the gate and routing back to the
+planner is perfectly legal. The three names `apply_node` hands on are raised while the implementer
+still holds the item. So the planner route works from one refusal and cannot work from another,
+and no test noticed because **both repair tests use the implementation route**, where the agent
+being sent back to is the agent holding the work.
+
+**And `test_dangling_gotos_in_the_graph` is green, correctly.** It reads the `goto` literals out
+of the sources and checks them against the compiled graph; `offer_the_work_item_to_the_planner`
+really does exist. What no guard asks is **which stage the work item is at when that node runs**.
+A node that exists and cannot be reached from where the run actually stands is precisely the
+shape that guard was built for and cannot see, and it is now a test of its own.
+
+**The refusal underneath is correct and nothing here weakens it.** A work item is released to a
+human and not to a peer; that is the rule the whole system rests on. The only edge out of
+`IN_PROGRESS_BY_AGENT` to a stage nobody holds is `AWAITING_HUMAN_APPROVAL`, so **where this
+route should go is a decision about the specification, and it is recorded as owed rather than
+taken at the end of a run.** What was missing either way — and what is fixed — is the sentence: a
+run that hits this now stops naming both agents and naming the move the table does allow, instead
+of with a traceback that says something about agents is broken and offers no way through it.
+
+**And the guard is in the node, not in the supervisor, which is the part worth remembering.** I
+wrote it inside `supervise_a_repair` first, and this test caught it there: the supervisor is a
+seam, every test replaces it, and a guard behind the seam is green through an entire failing run.
+`supervise_a_repair_in_this_run` is what turns the supervisor's answer into a route, so that is
+where the route is checked.
