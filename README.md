@@ -612,6 +612,7 @@ Stated rather than left to be discovered.
   | `test_every_field_a_stage_asks_for_is_a_field_the_answer_has.py` | that every stage's question names only fields the artefact has — the planner asked for `what_it_expectes_next`, which no type has |
   | `test_a_build_system_names_what_the_build_runs_on.py` | that the question asks what the build runs on, and that `build_system: npm` is refused — two real runs were stopped at their first gate over that field |
   | `test_what_an_inspection_says_it_did_not_show_is_every_file_it_did_not_show.py` | that every source file not read is named under *what was not shown*, including the ones a name filter never selected |
+  | `test_the_change_is_taken_back_inside_the_clone.py` | that the suite is answered on the clone without the change, and not on whatever repository the process happens to be standing in |
   | `test_a_reader_does_not_commit_a_write_it_did_not_make.py` | that a reader of the register does not commit a write it did not make, which is what every `_prepared` did while a board polled a run |
   | `test_a_supervisor_that_cannot_answer_stops_the_run_with_a_reason.py` | that a repair supervisor whose answer cannot validate stops the run by refusing, naming the agents the model forgot, and leaves the reason on the card |
   | `test_every_stage_reasoning_about_a_file_is_shown_it.py` | that every stage reading a repository is shown what is *inside* the files, and that the set of such stages is derived from the signatures rather than written out |
@@ -732,3 +733,105 @@ runtime**, the same conclusion the six runs in `ai-sdlc-bestof-fast-selfaware` r
 and the interactive path — the only mode in which this repository has ever delivered anything —
 needs a person at eight gates. Turning the finding above into a field is a change to what
 `DiscoveryReport` *is*, which is a glossary decision rather than a test.
+
+---
+
+## Six real runs, and every refusal names what I should have written instead
+
+Runs 5 to 10 continued the section above on the same repository, and they are a different kind of
+finding from runs 1 to 4, because by the fifth I had stopped asking for things and started asking
+for **one change with a provable acceptance criterion**.
+
+**Runs 5 and 6 were the same request and they were refused for two different reasons, both of
+them right.** The work was to add a `npm run typecheck` step to `.github/workflows/ci.yml` and a
+unit test that fails if it is removed. The repository has the script, the workflow does not run
+it, and the gap is real. Two runs, two refusals, at the requirements gate:
+
+> **Run 5**, on an artifact that contradicted itself: *Requirement 1 fixes the typecheck step in
+> the same job and install as `npm test`, while ambiguity 3 declares that exact placement
+> undetermined and routes it to a person — the artifact both decides and blocks on the same
+> question, so an implementer must either halt or pick a side its own text reserves for a human.*
+
+That is the one I would not have predicted, and it is the sharpest thing this gate has ever said
+about this repository. `Requirements` has a list of requirements and a list of ambiguities, and
+**nothing checks that the two do not disagree.** An artifact that fixes an answer in one field
+and defers the same answer in another is structurally impossible to satisfy, and it reached a
+reviewer whole.
+
+> **Run 6**, on a criterion no in-repo change can decide: *the third — "a commit that introduces
+> a TypeScript type error under `web-app` produces a failing workflow run" — is not decidable by
+> anything this run writes: it needs a hosted Actions run on a pushed commit.*
+
+Also right, and it named the repair: rescope the criterion to something the suite can assert
+in-repo, or move it out and call it a post-merge check for a person.
+
+**So the honest count for this deployment is six runs, six refusals, zero deliveries, and every
+single refusal was correct.** Two runs ago I wrote that the gate is not a formality. This is the
+measurement that says it is not a formality *and* that **autopilot cannot deliver on this
+repository as it stands**, because the two things that decide a delivery are a plan and an
+implementation, and the plan is exactly what the gate refuses when it contradicts itself.
+
+**What I have not done, and will not pretend otherwise:** no pull request has been opened by this
+branch. The one that exists on the upstream ([#9](https://github.com/paligakrzychu/wellbeing-tracker-public/pull/9),
+`DELIVERY.md`, +39) was opened on 2026-09-28 by the frozen source this repository was forked from,
+two weeks before this branch existed. Counting it as a delivery of mine would be the exact
+"decision that cannot be found later is not a record, it is a claim" mistake this repository is
+built against.
+
+**And the finding worth keeping is narrower than "autopilot delivers nothing."** It is that the
+gate refused correctly in **six cases out of six** without ever refusing for the wrong reason —
+never for "insufficient", always naming a specific criterion, a specific missing field, or a
+specific pair of colliding statements. A gate that refuses everything also refuses everything.
+This one refused everything *and was right every time*, and the difference is the thing that took
+twelve runs to establish.
+
+---
+
+## The plan cannot say what the change is, and the gate refused it for exactly that
+
+Run 10 got to **gate six of eight** — further than any run on this branch — and was refused on a
+plan that had no defect I had thought of:
+
+> The plan only enumerates paths: it never states the workflow step to be inserted into
+> `.github/workflows/ci.yml`, never checks that a `typecheck` script exists in `package.json`
+> (and `package.json` is absent from `files_to_change`, so an undefined script would fail CI),
+> and its single test asserts positioning after an `npm test` step whose presence in `ci.yml` the
+> plan never establishes. Before this runs, it needs the actual YAML step plus confirmation of
+> both scripts in the current workflow/package manifest.
+
+**Every clause of that is right, and every clause of it was designed in.** `ImplementationPlan`
+has exactly five fields and all five are lists of names:
+
+```text
+files_to_change   files_to_add   tests_to_add   dependencies   migrations
+```
+
+There is nowhere in the artifact to say *what* the change is. And the planner's prompt is one line
+long on this subject — `plan_the_change.py:202`:
+
+> `Plan only. Do not write, edit or suggest the contents of any file.`
+
+So a reviewer at gate six is asked to rule on **five lists of filenames and nothing else**. For a
+one-line YAML step that is not a thin plan, it is not a plan: `ci.yml` appears in `files_to_change`
+and a reviewer can learn from this artifact that the run intends to touch a workflow, and not one
+other thing about it. **The gate before code is written is a gate over a list of paths.**
+
+**And the instruction that forbids it has no test behind it.** §0.4 of this repository's own
+rules says that if a prompt has to *forbid* something, a test must *assert* it, and that prompt
+begging is not verification. I grepped for the line: it appears once, in the prompt, and nowhere
+in `tests/`. So it is not a rule anyone is keeping — it is a sentence, and the gate has just
+demonstrated that it wants the opposite of what the sentence says.
+
+**This is the runs 3 and 4 finding again, one stage later and worse.** Those runs were refused
+because `DiscoveryReport` has no field for what a repository declares about its runtime, so a
+reviewer holding the artifact cannot rule on the question. Here it is `ImplementationPlan` with
+no field for what the change is — and gate six is the one immediately before code exists. The
+precedent for this shape is recorded already: adding the field starts in
+`docs/domain-glossary.md`, not in a test.
+
+**What I did not do.** I did not widen `ImplementationPlan` on the strength of one refusal. It is
+a change to what the artifact *is*, it changes what a person approves at a gate, and the planner
+prompt forbidding contents may have been protecting something I have not measured yet — the
+implementer being *told* what to write is a different prompt from the planner being *allowed* to
+say it. That is a decision about the glossary and a cycle of its own, recorded here rather than
+taken quietly at the end of a run.

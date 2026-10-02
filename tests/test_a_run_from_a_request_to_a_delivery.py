@@ -713,6 +713,7 @@ def _wait_until_the_run_has_finished(the_board: TestClient, work_item_id: str) -
     sentence would hang on it until the ceiling. Both facts are asked for because neither alone
     distinguishes *finished* from *stopped*, and this wait is used by tests asserting both.
     """
+
     def _how_the_run_has_ended() -> bool:
         about_it = the_board.get(f"/api/runs/{work_item_id}").json()
         return about_it["how_it_ended"] is not None or not about_it["is_still_working"]
