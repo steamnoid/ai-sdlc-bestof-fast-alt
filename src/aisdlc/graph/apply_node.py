@@ -24,13 +24,13 @@ from datetime import UTC, datetime
 from langgraph.types import Command
 
 from aisdlc.agents.apply_the_plan import ADeliveredChange
+from aisdlc.agents.artifact import Artifact
 from aisdlc.agents.implement_the_plan import AWriteThatChangesNothingError
 from aisdlc.agents.implementation_plan import ImplementationPlan
 from aisdlc.domain.repository import Repository
 from aisdlc.graph.agent_state import WHAT_STOPPED_THIS_RUN, AgentState
 from aisdlc.graph.clone_node import TheRepositoryHasNotBeenClonedYetError
 from aisdlc.graph.pickup_node import THE_DEVELOPER_IMPLEMENTATION_AGENT
-from aisdlc.graph.plan_node import THE_ARTIFACT_PLANNING_PRODUCES
 from aisdlc.graph.supervise_a_repair import (
     WHERE_THE_SUPERVISOR_DECIDES_WHETHER_TO_REPAIR,
 )
@@ -45,7 +45,6 @@ ApplyAndVerify = Callable[
     [ClonedRepository, Repository, ImplementationPlan], ADeliveredChange
 ]
 
-THE_ARTIFACT_APPLYING_PRODUCES = "VerificationReport"
 ITS_FIRST_VERSION = 1
 
 WHERE_THE_VERIFICATION_IS_WRITTEN = "write_what_the_change_says"
@@ -82,8 +81,8 @@ def apply_and_verify_in_this_run(
 
     if clone is None or plan is None:
         raise TheRepositoryHasNotBeenClonedYetError(
-            f"{THE_ARTIFACT_APPLYING_PRODUCES} writes into the clone and implements "
-            f"{THE_ARTIFACT_PLANNING_PRODUCES}, and this run has not reached either yet. The "
+            f"{Artifact.VERIFICATION_REPORT} writes into the clone and implements "
+            f"{Artifact.IMPLEMENTATION_PLAN}, and this run has not reached either yet. The "
             "implementation node is wired before the clone or the plan."
         )
 
@@ -125,7 +124,7 @@ def apply_and_verify_in_this_run(
         update={
             "written_files": delivered.written,
             "verification_report": delivered.verification,
-            "presented_artifact_id": THE_ARTIFACT_APPLYING_PRODUCES,
+            "presented_artifact_id": Artifact.VERIFICATION_REPORT,
             "presented_artifact_version": ITS_FIRST_VERSION,
         },
     )

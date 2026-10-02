@@ -594,6 +594,7 @@ Stated rather than left to be discovered.
 
   | the default suite, no network and no credential | what it holds this repository to |
   |---|---|
+  | `test_an_artifact_is_one_name_from_one_set.py` | that the artifact a run presents is one name from one closed set of eight, spelled in exactly one module, and that every member has exactly one route |
   | `test_a_conflict_is_settled_by_naming_a_repair.py` | that a conflicting delivery is settled by naming one of two repairs that a run can actually take, that a decision with no grounds is refused, and that the node holds no prompt of its own |
   | `test_a_rebase_lands_this_runs_commit.py` | that a rebase lands this run's commit on the branch it joins, moves nothing else, and leaves the clone usable when git cannot finish |
   | `test_a_merge_lands_one_commit_and_says_so.py` | that a merge lands the one commit anything proved, that `mergeable` is read before anything is pushed at the pull request, and that `null` is neither yes nor no |

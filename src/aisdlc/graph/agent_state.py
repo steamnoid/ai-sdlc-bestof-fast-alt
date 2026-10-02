@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Annotated, TypedDict
 
 from aisdlc.agents.architecture_report import ArchitectureReport
+from aisdlc.agents.artifact import Artifact
 from aisdlc.agents.discovery_report import DiscoveryReport
 from aisdlc.agents.implement_the_plan import FileToWrite
 from aisdlc.agents.implementation_plan import ImplementationPlan
@@ -73,7 +74,7 @@ class AgentState(TypedDict):
     which_checks_went_green: list[str] | None
     the_commit_that_landed: str | None
     the_conflict_that_stopped_this_merge: str | None
-    presented_artifact_id: str
+    presented_artifact_id: Artifact
     presented_artifact_version: int
     repair: WhatToRepeat | None
     what_stopped_this_run: str | None

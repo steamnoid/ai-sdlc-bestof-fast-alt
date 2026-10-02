@@ -19,6 +19,7 @@ from collections.abc import Callable
 
 from langgraph.types import Command
 
+from aisdlc.agents.artifact import Artifact
 from aisdlc.agents.implementation_plan import ImplementationPlan
 from aisdlc.agents.pull_request_request import PullRequestRequest
 from aisdlc.agents.verification_report import VerificationReport
@@ -56,20 +57,19 @@ found by reading for it once the first one was fixed, because the defect has one
 shape has more than one place it can sit.
 """
 
-THE_ARTIFACT_DELIVERY_PRODUCES = "PullRequestRequest"
 ITS_FIRST_VERSION = 1
 
 # Every gate a run walks through, in order. A delivery needs all of them, which is the whole
 # of what "verify that required gates passed" means in §10 — and it means *answered yes*, not
 # merely answered, because a refusal ends the run and this stage is downstream of the end.
 EVERY_ARTIFACT_A_PERSON_RULES_ON_BEFORE_A_DELIVERY = (
-    "DiscoveryReport",
-    "Requirements",
-    "QaPlan",
-    "ArchitectureReport",
-    "SecurityReport",
-    "ImplementationPlan",
-    "VerificationReport",
+    Artifact.DISCOVERY_REPORT,
+    Artifact.REQUIREMENTS,
+    Artifact.QA_PLAN,
+    Artifact.ARCHITECTURE_REPORT,
+    Artifact.SECURITY_REPORT,
+    Artifact.IMPLEMENTATION_PLAN,
+    Artifact.VERIFICATION_REPORT,
 )
 
 
@@ -120,7 +120,7 @@ def a_request_for_the_delivery(state: AgentState) -> dict:
 
     if plan is None or report is None:
         raise TheDeliveryHasNoVerifiedChangeToDeliverError(
-            f"{THE_ARTIFACT_DELIVERY_PRODUCES} states a change and what was verified about it, "
+            f"{Artifact.PULL_REQUEST_REQUEST} states a change and what was verified about it, "
             f"and this run has {'a plan but no verification' if plan is not None else 'no plan'}"
             f"{'' if report is not None else ' and no verification'}. A pull request that "
             "omitted either would present a change nobody verified, which is the one thing a "
@@ -156,7 +156,7 @@ def a_request_for_the_delivery(state: AgentState) -> dict:
                 )
             ),
         ),
-        "presented_artifact_id": THE_ARTIFACT_DELIVERY_PRODUCES,
+        "presented_artifact_id": Artifact.PULL_REQUEST_REQUEST,
         "presented_artifact_version": ITS_FIRST_VERSION,
     }
 
@@ -257,13 +257,13 @@ def open_the_delivery(
 
     if the_request is None:
         raise TheDeliveryHasNothingToDeliverError(
-            f"{THE_ARTIFACT_DELIVERY_PRODUCES} is opened by the stage that wrote it, and this "
+            f"{Artifact.PULL_REQUEST_REQUEST} is opened by the stage that wrote it, and this "
             "run has none. The delivery node is wired after the node that builds the request."
         )
 
     if not _this_request_was_approved(state, the_request):
         raise TheDeliveryWasNeverApprovedError(
-            f"{THE_ARTIFACT_DELIVERY_PRODUCES} version {the_request} was never approved, so "
+            f"{Artifact.PULL_REQUEST_REQUEST} version {the_request} was never approved, so "
             "nothing was pushed and nothing was opened. A pull request is somebody's decision "
             "to review, and opening one nobody approved is a delivery nobody asked for."
         )
@@ -318,7 +318,7 @@ def _who_approved_the_verification(state: AgentState) -> str:
     the_verification_approvals = [
         approval
         for approval in state["approvals"]
-        if approval.artifact_id == "VerificationReport"
+        if approval.artifact_id == Artifact.VERIFICATION_REPORT
     ]
     if not the_verification_approvals:
         return ""
@@ -336,7 +336,7 @@ def _this_request_was_approved(
     repository both have an artifact called `PullRequestRequest` and only one of them is this.
     """
     return any(
-        approval.artifact_id == THE_ARTIFACT_DELIVERY_PRODUCES
+        approval.artifact_id == Artifact.PULL_REQUEST_REQUEST
         and approval.work_item_id == state["work_item"].work_item_id
         for approval in state["approvals"]
     )
@@ -375,7 +375,7 @@ def _refuse_a_run_with_an_unanswered_gate(state: AgentState) -> None:
 
     if missing:
         raise TheDeliveryHasNotBeenApprovedError(
-            f"{THE_ARTIFACT_DELIVERY_PRODUCES} is opened only after every gate has been "
+            f"{Artifact.PULL_REQUEST_REQUEST} is opened only after every gate has been "
             f"approved, and this run has none of: {', '.join(missing)}. A run that verified a "
             "change and was not approved for it has a change on disk and nothing else, and "
             "opening a pull request for it is a delivery nobody asked for."

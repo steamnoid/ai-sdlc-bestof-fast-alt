@@ -18,6 +18,7 @@ from datetime import UTC, datetime
 
 from langgraph.types import Command
 
+from aisdlc.agents.artifact import Artifact
 from aisdlc.agents.plan_the_change import PlannedTestDirectoryNotCollectedError
 from aisdlc.agents.requirements import Requirements
 from aisdlc.agents.what_the_planner_concluded import ImplementationPlanAnswer
@@ -47,7 +48,6 @@ PlanTheChange = Callable[
 # fallback is a lie with a position.
 THE_RUNNER_ANNOUNCED_NOTHING_YET = ""
 
-THE_ARTIFACT_PLANNING_PRODUCES = "ImplementationPlan"
 
 
 class ThePlanHasNoApprovedRequirementsError(Exception):
@@ -63,7 +63,7 @@ class ThePlanHasNoApprovedRequirementsError(Exception):
     def __init__(self, why: str) -> None:
         """Say which artifact wanted the requirements, and what this run has instead."""
         super().__init__(
-            f"{THE_ARTIFACT_PLANNING_PRODUCES} is planned from the approved requirements, and "
+            f"{Artifact.IMPLEMENTATION_PLAN} is planned from the approved requirements, and "
             f"this run has none. {why}"
         )
 
@@ -83,7 +83,7 @@ def plan_the_change_in_this_run(state: AgentState, plan: PlanTheChange) -> Comma
 
     if clone is None:
         raise TheRepositoryHasNotBeenClonedYetError(
-            f"{THE_ARTIFACT_PLANNING_PRODUCES} reads the repository from the clone, and this "
+            f"{Artifact.IMPLEMENTATION_PLAN} reads the repository from the clone, and this "
             "run has none yet. The clone node is wired after the planning node."
         )
 
@@ -126,6 +126,6 @@ def plan_the_change_in_this_run(state: AgentState, plan: PlanTheChange) -> Comma
 
     return {
         "implementation_plan": what_the_planning_agent_concluded.plan,
-        "presented_artifact_id": THE_ARTIFACT_PLANNING_PRODUCES,
+        "presented_artifact_id": Artifact.IMPLEMENTATION_PLAN,
         "presented_artifact_version": how_many_versions_the_planning_agent_has_written,
     }

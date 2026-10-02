@@ -10,6 +10,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
 from aisdlc.agents.architecture_report import ArchitectureReport
+from aisdlc.agents.artifact import Artifact
 from aisdlc.agents.discovery_report import DiscoveryReport, EvidenceFile
 from aisdlc.agents.implement_the_plan import FileToWrite
 from aisdlc.agents.implementation_plan import ImplementationPlan
@@ -597,6 +598,11 @@ def a_config(thread_id: str) -> dict:
 # A bare `"aisdlc."` prefix would be the same claim with none of the checking, and a
 # permissive serializer would be no claim at all.
 TYPES_A_CHECKPOINT_MAY_HOLD = (
+    # **`Artifact` and not `str`, and the reason a resumed run cannot do without it.** An enum
+    # member is a `str` at runtime, so the serializer would very probably cope — and a
+    # serializer that is very probably coping is how a run written to disk becomes a run that
+    # cannot be resumed, on the day the runtime enforces it rather than the day it is written.
+    Artifact,
     Stage,
     Role,
     Repository,

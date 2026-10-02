@@ -23,6 +23,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from aisdlc.agents.architecture_report import ArchitectureReport
+from aisdlc.agents.artifact import Artifact
 from aisdlc.agents.discovery_report import DiscoveryReport
 from aisdlc.agents.implementation_plan import ImplementationPlan
 from aisdlc.agents.pull_request_request import PullRequestRequest
@@ -40,7 +41,6 @@ from aisdlc.tools.the_project_directory import the_clone_directory_of, the_proje
 
 A_FILE_EXTENSION_A_PERSON_CAN_READ = ".json"
 ITS_FIRST_VERSION = 1
-THE_ARTIFACT_A_RUN_BEGINS_WITH = "DiscoveryReport"
 
 # What exists on disk, in the order a run produces it. **Read in order and not by name**, because
 # the order is what decides which artifact a resumed run presents, and a lookup by name would have
@@ -137,7 +137,7 @@ def _the_state_of(
         "implementation_plan": None,
         "verification_report": None,
         "pull_request_request": None,
-        "presented_artifact_id": THE_ARTIFACT_A_RUN_BEGINS_WITH,
+        "presented_artifact_id": Artifact.DISCOVERY_REPORT,
         "presented_artifact_version": ITS_FIRST_VERSION,
     }
     state.update(what_exists)  # type: ignore[typeddict-item]
@@ -147,17 +147,25 @@ def _the_state_of(
     return state
 
 
-def _the_artifact_a_resumed_run_presents(what_exists: dict[str, object]) -> str:
+def _the_artifact_a_resumed_run_presents(what_exists: dict[str, object]) -> Artifact:
     """The first artifact this run has not produced, or the last one when it has produced them all.
 
     **The run's own list rather than the pipeline's order again**, because the two are the same
-    list and a second one is a second thing to forget to extend.
+    list and a second one is a second thing to forget to extend. What this list holds and the
+    pipeline's mapping does not is the **channel** each artifact arrives in, which is why it cannot
+    be read out of `router.py` and is not a second copy of it.
+
+    **The class name is asked of the set rather than returned as a string, and that is the whole of
+    what makes the two disagree loudly.** A ninth artifact added here and forgotten in `Artifact`
+    used to resume a run and present a name no gate had heard of; now the lookup refuses **and
+    lists the eight that exist**, so the omission is found by the run that needed the ninth rather
+    than by a reader comparing two lists.
     """
     for channel, the_artifact in _THE_ARTIFACTS_IN_THE_ORDER_A_RUN_PRODUCES_THEM:
         if channel not in what_exists:
-            return the_artifact.__name__
+            return Artifact(the_artifact.__name__)
 
-    return _THE_ARTIFACTS_IN_THE_ORDER_A_RUN_PRODUCES_THEM[-1][1].__name__
+    return Artifact(_THE_ARTIFACTS_IN_THE_ORDER_A_RUN_PRODUCES_THEM[-1][1].__name__)
 
 
 def _where_this_runs_clone_is(work_item: WorkItem, projects_root: Path) -> ClonedRepository:

@@ -22,6 +22,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import UTC, datetime
 
+from aisdlc.agents.artifact import Artifact
 from aisdlc.agents.qa_plan import QaPlan
 from aisdlc.agents.qa_plan_answer import QaPlanAnswer
 from aisdlc.agents.requirements import Requirements
@@ -31,7 +32,6 @@ from aisdlc.tools.what_people_said_about_a_work_item import a_comment_was_left
 
 AnalyzeTheRequirements = Callable[[Requirements], tuple[QaPlan, QaPlanAnswer]]
 
-THE_ARTIFACT_THE_QA_ANALYST_PRODUCES = "QaPlan"
 ITS_FIRST_VERSION = 1
 
 
@@ -47,7 +47,7 @@ class RequirementsHaveNotBeenApprovedYetError(Exception):
     def __init__(self, why: str) -> None:
         """Say which artifact wanted the requirements, and what this run has instead."""
         super().__init__(
-            f"{THE_ARTIFACT_THE_QA_ANALYST_PRODUCES} is planned from the approved "
+            f"{Artifact.QA_PLAN} is planned from the approved "
             f"requirements, and this run has none. {why} A plan planned from nothing looks "
             "the same as a plan planned from something, and a person cannot tell them apart."
         )
@@ -71,7 +71,7 @@ def analyze_the_requirements_in_this_run(
 
     if requirements is None:
         raise RequirementsHaveNotBeenApprovedYetError(
-            f"The {THE_ARTIFACT_THE_QA_ANALYST_PRODUCES} stage is reached only through the "
+            f"The {Artifact.QA_PLAN} stage is reached only through the "
             "router, and the router sends it an approved artifact."
         )
 
@@ -87,6 +87,6 @@ def analyze_the_requirements_in_this_run(
 
     return {
         "qa_plan": plan,
-        "presented_artifact_id": THE_ARTIFACT_THE_QA_ANALYST_PRODUCES,
+        "presented_artifact_id": Artifact.QA_PLAN,
         "presented_artifact_version": ITS_FIRST_VERSION,
     }

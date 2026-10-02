@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import UTC, datetime
 
+from aisdlc.agents.artifact import Artifact
 from aisdlc.agents.requirements import Requirements
 from aisdlc.agents.requirements_answer import RequirementsAnswer
 from aisdlc.domain.commissioned_request import CommissionedRequest
@@ -20,7 +21,6 @@ Analyze = Callable[
     tuple[Requirements, RequirementsAnswer],
 ]
 
-THE_ARTIFACT_THE_PRODUCT_ANALYST_PRODUCES = "Requirements"
 ITS_FIRST_VERSION = 1
 
 
@@ -56,7 +56,7 @@ def analyze_the_repository_in_this_run(state: AgentState, analyze: Analyze) -> d
 
     if clone is None:
         raise TheRepositoryHasNotBeenClonedYetError(
-            f"{THE_ARTIFACT_THE_PRODUCT_ANALYST_PRODUCES} is reasoned about from the clone, "
+            f"{Artifact.REQUIREMENTS} is reasoned about from the clone, "
             "and this run has none yet. The clone node is wired before the analyst node."
         )
 
@@ -76,6 +76,6 @@ def analyze_the_repository_in_this_run(state: AgentState, analyze: Analyze) -> d
 
     return {
         "requirements": requirements,
-        "presented_artifact_id": THE_ARTIFACT_THE_PRODUCT_ANALYST_PRODUCES,
+        "presented_artifact_id": Artifact.REQUIREMENTS,
         "presented_artifact_version": ITS_FIRST_VERSION,
     }

@@ -33,15 +33,8 @@ a rule for at all.
 
 from __future__ import annotations
 
+from aisdlc.agents.artifact import Artifact
 from aisdlc.graph.agent_state import AgentState
-from aisdlc.graph.analyze_node import THE_ARTIFACT_THE_PRODUCT_ANALYST_PRODUCES
-from aisdlc.graph.apply_node import THE_ARTIFACT_APPLYING_PRODUCES
-from aisdlc.graph.architecture_node import THE_ARTIFACT_THE_ARCHITECTURE_ANALYST_PRODUCES
-from aisdlc.graph.deliver_node import THE_ARTIFACT_DELIVERY_PRODUCES
-from aisdlc.graph.discover_node import THE_ARTIFACT_DISCOVERY_PRODUCES
-from aisdlc.graph.plan_node import THE_ARTIFACT_PLANNING_PRODUCES
-from aisdlc.graph.qa_node import THE_ARTIFACT_THE_QA_ANALYST_PRODUCES
-from aisdlc.graph.security_node import THE_ARTIFACT_THE_SECURITY_ANALYST_PRODUCES
 from aisdlc.graph.the_agents_a_run_reasons_with import (
     THE_DEVELOPER_IMPLEMENTATION_AGENT,
 )
@@ -72,14 +65,14 @@ class NoRouteIsDeclaredForThisArtifactError(Exception):
 # look a run's artifact up in it — which is why there is no fall-through and why an artifact
 # that is not here cannot be routed at all.
 WHERE_AN_APPROVED_ARTIFACT_LEADS = {
-    THE_ARTIFACT_DISCOVERY_PRODUCES: THE_NEXT_ARTIFACT_IS_THE_PROPOSAL,
-    THE_ARTIFACT_THE_PRODUCT_ANALYST_PRODUCES: THE_NEXT_ARTIFACT_IS_THE_QA_PLAN,
-    THE_ARTIFACT_THE_QA_ANALYST_PRODUCES: THE_NEXT_ARTIFACT_IS_THE_ARCHITECTURE,
-    THE_ARTIFACT_THE_ARCHITECTURE_ANALYST_PRODUCES: THE_NEXT_ARTIFACT_IS_THE_SECURITY_REPORT,
-    THE_ARTIFACT_THE_SECURITY_ANALYST_PRODUCES: THE_NEXT_ARTIFACT_IS_A_PLAN,
-    THE_ARTIFACT_PLANNING_PRODUCES: THE_NEXT_ARTIFACT_IS_THE_CHANGE,
-    THE_ARTIFACT_APPLYING_PRODUCES: THE_NEXT_ARTIFACT_IS_THE_DELIVERY,
-    THE_ARTIFACT_DELIVERY_PRODUCES: THE_APPROVED_DELIVERY_IS_PUSHED_AND_OPENED,
+    Artifact.DISCOVERY_REPORT: THE_NEXT_ARTIFACT_IS_THE_PROPOSAL,
+    Artifact.REQUIREMENTS: THE_NEXT_ARTIFACT_IS_THE_QA_PLAN,
+    Artifact.QA_PLAN: THE_NEXT_ARTIFACT_IS_THE_ARCHITECTURE,
+    Artifact.ARCHITECTURE_REPORT: THE_NEXT_ARTIFACT_IS_THE_SECURITY_REPORT,
+    Artifact.SECURITY_REPORT: THE_NEXT_ARTIFACT_IS_A_PLAN,
+    Artifact.IMPLEMENTATION_PLAN: THE_NEXT_ARTIFACT_IS_THE_CHANGE,
+    Artifact.VERIFICATION_REPORT: THE_NEXT_ARTIFACT_IS_THE_DELIVERY,
+    Artifact.PULL_REQUEST_REQUEST: THE_APPROVED_DELIVERY_IS_PUSHED_AND_OPENED,
 }
 
 
@@ -122,7 +115,7 @@ def where_a_gate_outcome_leads(state: AgentState) -> str:
     # becomes a destination, so this is the one place the verdict is honoured. Skipping the
     # implementation is a whole container suite run on each side of the change, plus a commit
     # attempt, for a stage nobody objected to.
-    if approved_artifact == THE_ARTIFACT_PLANNING_PRODUCES and a_repair_cleared_the_implementer(
+    if approved_artifact == Artifact.IMPLEMENTATION_PLAN and a_repair_cleared_the_implementer(
         state
     ):
         return THE_APPROVED_DELIVERY_IS_PUSHED_AND_OPENED

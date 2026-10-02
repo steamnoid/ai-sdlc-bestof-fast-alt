@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import UTC, datetime
 
+from aisdlc.agents.artifact import Artifact
 from aisdlc.agents.discovery_answer import DiscoveryAnswer
 from aisdlc.agents.discovery_report import DiscoveryReport
 from aisdlc.domain.repository import Repository
@@ -18,7 +19,6 @@ Discover = Callable[
     [ClonedRepository, Repository], tuple[DiscoveryReport, DiscoveryAnswer]
 ]
 
-THE_ARTIFACT_DISCOVERY_PRODUCES = "DiscoveryReport"
 ITS_FIRST_VERSION = 1
 
 
@@ -40,7 +40,7 @@ def discover_the_repository_in_this_run(state: AgentState, discover: Discover) -
 
     if clone is None:
         raise TheRepositoryHasNotBeenClonedYetError(
-            f"{THE_ARTIFACT_DISCOVERY_PRODUCES} reads the repository from the clone, and "
+            f"{Artifact.DISCOVERY_REPORT} reads the repository from the clone, and "
             "this run has none yet. The clone node is wired after the discovery node."
         )
 
@@ -58,6 +58,6 @@ def discover_the_repository_in_this_run(state: AgentState, discover: Discover) -
 
     return {
         "discovery_report": report,
-        "presented_artifact_id": THE_ARTIFACT_DISCOVERY_PRODUCES,
+        "presented_artifact_id": Artifact.DISCOVERY_REPORT,
         "presented_artifact_version": ITS_FIRST_VERSION,
     }
