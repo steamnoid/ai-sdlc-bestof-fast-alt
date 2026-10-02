@@ -94,21 +94,20 @@ def test_the_sentence_is_one_module_and_six_prompts_build_it_from_there() -> Non
     Asserting that the wording lives in exactly one module is what makes a reader able to fix
     all six by editing one file.
     """
+    the_sentence_module = WHERE_THE_AGENTS_ARE / f"{THE_MODULE_THAT_SAYS_IT_ONCE}.py"
+    the_whole_source = the_sentence_module.read_text(encoding="utf-8")
+
     said_somewhere_else = [
         one_agent.name
-        for one_agent in ast.parse(
-            (WHERE_THE_AGENTS_ARE / THE_MODULE_THAT_SAYS_IT_ONCE)
-            .with_suffix(".py")
-            .read_text(encoding="utf-8")
-        ).body
+        for one_agent in ast.parse(the_whole_source).body
         if isinstance(one_agent, ast.FunctionDef)
-        and "root of the repository" in ast.get_docstring(one_agent)
+        and "root of the repository" in (ast.get_source_segment(the_whole_source, one_agent) or "")
     ]
 
     assert said_somewhere_else == ["the_rule_about_naming_a_file"], (
-        f"the sentence about naming a file is documented in {said_somewhere_else} and the "
-        f"prompts import it from {THE_MODULE_THAT_SAYS_IT_ONCE}. If a second prompt has grown its "
-        "own wording, the two will drift and nothing else here will say so"
+        f"the sentence about naming a file is written in {said_somewhere_else} and the prompts "
+        f"import it from {THE_MODULE_THAT_SAYS_IT_ONCE}. If a second prompt has grown its own "
+        "wording, the two will drift and nothing else here will say so"
     )
 
 

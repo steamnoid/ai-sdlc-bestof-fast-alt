@@ -28,6 +28,7 @@ from collections.abc import Callable
 from langchain_core.language_models.chat_models import BaseChatModel
 from pydantic import ValidationError
 
+from aisdlc.agents.how_to_name_a_file import the_rule_about_naming_a_file
 from aisdlc.agents.qa_plan import EmptyQaPlanError, QaPlan
 from aisdlc.agents.qa_plan_answer import QaPlanAnswer
 from aisdlc.agents.requirements import Requirements
@@ -111,6 +112,7 @@ def the_prompt_to_analyze_requirements(
         "\n"
         "The approved requirements:\n"
         f"{requirements.model_dump_json(indent=2)}"
+        + the_rule_about_naming_a_file()
     )
 
 

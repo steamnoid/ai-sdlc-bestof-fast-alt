@@ -20,6 +20,7 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from pydantic import ValidationError
 
 from aisdlc.agents.a_value_that_says_something import a_value_that_says_something
+from aisdlc.agents.how_to_name_a_file import the_rule_about_naming_a_file
 from aisdlc.agents.security_finding import THE_FIELDS_A_FINDING_MAY_NAME
 from aisdlc.agents.security_report import (
     EmptySecurityReportError,
@@ -164,6 +165,7 @@ def _what_was_examined(inspection: str) -> str:
         "repository's manifests, its README, its CI configuration and its top-level listing. "
         "Nothing outside that inventory was read, and no risk outside it was assessed.\n\n"
         f"What it was shown:\n\n{inspection}"
+        + the_rule_about_naming_a_file()
     )
 
 

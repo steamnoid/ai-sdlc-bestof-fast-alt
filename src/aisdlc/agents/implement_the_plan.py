@@ -47,6 +47,7 @@ import time
 from langchain_core.language_models.chat_models import BaseChatModel
 from pydantic import BaseModel, ConfigDict, ValidationError
 
+from aisdlc.agents.how_to_name_a_file import the_rule_about_naming_a_file
 from aisdlc.agents.implementation_plan import ImplementationPlan
 from aisdlc.agents.what_an_agent_judged import WhatAnAgentJudged
 from aisdlc.llm.asking_a_model_for import ask_a_model_for
@@ -197,6 +198,7 @@ def the_prompt_to_implement(
         "Each file below is shown with the text it holds right now:\n\n"
         f"{what_there_is_now}"
         + _no_correction_on_the_first_question(what_was_wrong)
+        + the_rule_about_naming_a_file()
     )
 
 
