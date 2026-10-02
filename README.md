@@ -594,7 +594,6 @@ Stated rather than left to be discovered.
 
   | the default suite, no network and no credential | what it holds this repository to |
   |---|---|
-  | `test_a_delivered_run_asks_github_what_proved_the_commit.py` — in the delivery test — | that a delivered run asks GitHub what proved the commit before it says delivered, and that a refusal keeps it out of `DONE` |
   | `test_the_suite_went_green_on_the_commit_being_merged.py` | that a merge is justified by the checks on the sha the pull request reports, and that four different refusals stay four different facts |
   | `test_every_prompt_writing_a_path_says_where_a_path_starts.py` | that every prompt whose answer carries a path also says where a path starts — said once, because six prompts with their own wording drift |
   | `test_every_type_a_state_channel_holds_is_named_for_the_serializer.py` | that every type a state channel carries is one the checkpoint serializer may rebuild — a guard `lifecycle.py` described and named and never had |
