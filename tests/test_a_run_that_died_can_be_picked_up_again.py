@@ -44,7 +44,7 @@ WHERE_PROJECTS_LIVE = "AISDLC_PROJECTS_DIR"
 
 
 @pytest.fixture
-def an_empty_deployment(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def an_empty_deployment(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """A register and a projects root with nothing in them, because both of these stages write.
 
     **The register is opened here and not left to the first call that needs it**, because nothing
@@ -59,6 +59,8 @@ def an_empty_deployment(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None
 
     monkeypatch.setenv(WHERE_PROJECTS_LIVE, str(tmp_path / "projects"))
     the_register_lives_at(where_the_register_should_live())
+
+    return tmp_path
 
 
 def test_the_command_line_offers_a_way_to_continue_a_run() -> None:
@@ -84,7 +86,7 @@ def test_the_command_line_offers_a_way_to_continue_a_run() -> None:
 
 
 def test_a_run_nobody_started_is_refused_as_a_sentence_and_not_a_traceback(
-    an_empty_deployment: None,
+    an_empty_deployment: Path,
 ) -> None:
     """Continuing a run that was never begun is a decision, and it is reported as one.
 
@@ -112,4 +114,51 @@ def test_a_run_nobody_started_is_refused_as_a_sentence_and_not_a_traceback(
     assert A_RUN_NOBODY_STARTED in what_a_person_typed.output, (
         f"the command refused without naming the run it refused: {what_a_person_typed.output!r}. A "
         "refusal that does not name what it is about is a refusal a person has to guess at"
+    )
+
+
+def test_a_work_item_commissioned_by_a_process_can_be_carried_on(an_empty_deployment: Path) -> None:
+    """Commissioning a work item is what leaves the register a resuming run reads, and nothing does.
+
+    **The whole of the defect in one test, and it is a production path on both sides.** A process
+    commissions through `the_work_item_was_commissioned`, which writes SQLite — the copy a board
+    reads. A resuming run reads the **per-run `WorkItem.json`**, written by a *different* function
+    of the same name in `persistence/`, and **no production path calls that one.** So a run that
+    was commissioned, ran four gates and lost its terminal leaves nothing the resume path can find,
+    and `aisdlc resume` refuses a work item that demonstrably exists.
+
+    **Commissioned and resumed by the two public functions a process uses**, because a test that
+    reached into `persistence/` to write the missing file would pass while the hole stayed open —
+    which is precisely what the four call sites in the default suite do today, and why this was
+    green for as long as it was.
+    """
+    from aisdlc.agents.artifact import Artifact
+    from aisdlc.domain.commissioned_request import a_request_about
+    from aisdlc.domain.repository import Repository
+    from aisdlc.domain.role import Role
+    from aisdlc.domain.work_item import a_work_item_commissioned_for_an_agent
+    from aisdlc.store.what_a_run_records import the_work_item_was_commissioned
+    from aisdlc.tools.a_resumed_run_of import a_resumed_run_of
+
+    the_repository = Repository(owner="pikuniu", name="a-project")
+    the_work_item_id = "a-run-that-died-at-the-third-gate"
+    the_work_item_was_commissioned(
+        a_work_item_commissioned_for_an_agent(
+            work_item_id=the_work_item_id,
+            repository=the_repository,
+            accountable_role=Role.DEV,
+            commissioned_by="a person in a terminal",
+            requested=a_request_about("add a health endpoint", ""),
+        )
+    )
+
+    the_resumed = a_resumed_run_of(
+        the_repository, the_work_item_id, Path(str(an_empty_deployment / "projects"))
+    )
+
+    assert the_resumed["presented_artifact_id"] == Artifact.DISCOVERY_REPORT, (
+        f"a work item this process commissioned cannot be carried on: it presents "
+        f"{the_resumed['presented_artifact_id']!r} instead of refusing, which means the two "
+        "registers a run keeps are not the same register and nobody writes the one a resuming run "
+        "reads"
     )
