@@ -32,7 +32,7 @@ A_RECORD_A_PERSON_CAN_READ = ".json"
 WHERE_THE_WORK_ITEM_IS_REGISTERED = "WorkItem.json"
 
 
-def the_work_item_a_commission_registers(
+def a_work_item_is_left_where_its_run_happens(
     commissioned: WorkItem, projects_root: Path
 ) -> WorkItem:
     """The work item, written into the register — or the one that is already there.
@@ -59,7 +59,7 @@ def the_work_item_is_recorded_at(where_it_got_to: WorkItem, projects_root: Path)
     """Put the work item where it has got to, overwriting whatever the register said.
 
     **A separate function from commissioning, and the separation is a bug I paid for.** I made a
-    transition record through `the_work_item_a_commission_registers`, which is idempotent — it
+    transition record through the commissioning writer, which is idempotent — it
     writes once and afterwards returns what is there without writing. That is right for
     commissioning and exactly wrong for a move: every later transition found the file and left it
     alone, so a run went through eight gates and opened a pull request while the register still

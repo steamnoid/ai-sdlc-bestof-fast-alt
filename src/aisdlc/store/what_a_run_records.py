@@ -25,9 +25,13 @@ which is the exact bug this whole store was written to make impossible.
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from pathlib import Path
 
 from aisdlc.approval.approval_decision import ApprovalDecision
 from aisdlc.domain.work_item import WorkItem
+from aisdlc.persistence.the_register_of_work_items import (
+    a_work_item_is_left_where_its_run_happens,
+)
 from aisdlc.store.the_record_of_a_run import (
     a_decision_was_recorded,
     a_note_was_left,
@@ -41,17 +45,29 @@ from aisdlc.store.the_register_of_work_items import (
 from aisdlc.store.where_the_register_lives import holding_the_register
 
 
-def the_work_item_was_commissioned(work_item: WorkItem) -> WorkItem:
-    """Put a new work item in the register, and hand back the one that is there.
+def the_work_item_was_commissioned(work_item: WorkItem, projects_root: Path) -> WorkItem:
+    """Put a new work item in both registers, and hand back the one that is there.
 
-    **The engine's own JSON register is written too, and by the composition root**, because
-    that file is how a run resumes. Two files, one value, both written from the same object at
-    the same moment by the same caller — and the SQLite copy is the one a board reads while the
-    JSON one is the one a resuming run reads. They are written together or the disagreement
-    between them would be invisible from inside the run.
+    **Two registers, one value, written from the same object in the same breath** — the SQLite
+    copy a board reads, and the per-run `WorkItem.json` a resuming run reads. The docstring used to
+    say the second *is* written, *by the composition root*, and **no composition root did it**: a
+    run that was commissioned and then died before its first transition left nothing for `resume`
+    to find, and the refusal said the work item was not registered when it plainly was.
+
+    **A transition always wrote it, so the hole was only ever at the start** — which is why this
+    looked right from inside a run that had moved. `the_work_item_is_recorded_at` writes
+    unconditionally, so from the first transition on the file existed; what was missing was the
+    moment a work item comes into being.
+
+    **And the projects root is required rather than defaulted**, because where a run's register
+    lives is a fact about this deployment, and a default would be a second place it could be.
     """
     with holding_the_register() as register:
-        return the_work_item_a_commission_registers(register, work_item)
+        commissioned = the_work_item_a_commission_registers(register, work_item)
+
+    a_work_item_is_left_where_its_run_happens(commissioned, projects_root)
+
+    return commissioned
 
 
 def the_move_was_recorded(where_it_was: WorkItem, where_it_is_now: WorkItem) -> WorkItem:
