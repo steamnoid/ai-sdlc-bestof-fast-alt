@@ -58,7 +58,7 @@ from aisdlc.domain.work_item import WorkItem, a_work_item_commissioned_for_an_ag
 from aisdlc.graph.the_agents_a_run_reasons_with import THE_AGENTS_A_RUN_REASONS_WITH
 from aisdlc.llm.model_provider import LlmProvider
 from aisdlc.store.the_register_of_work_items import the_work_item_a_commission_registers
-from aisdlc.store.where_the_register_lives import holding_the_register, the_register_lives_at
+from aisdlc.store.where_the_register_lives import holding_the_register
 from aisdlc.tools.what_a_run_leaves_behind import write_the_report
 
 pytestmark = pytest.mark.e2e
@@ -105,7 +105,6 @@ def a_register_and_a_projects_root_under_a_temporary_directory(
     evidence of a decision on the machine that is being tested.
     """
     a_temporary_directory = tmp_path_factory.mktemp("this-gate-answered")
-    the_register_lives_at(a_temporary_directory / "the-register.sqlite3")
     return a_temporary_directory / "projects"
 
 

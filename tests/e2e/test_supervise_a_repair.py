@@ -69,7 +69,7 @@ from aisdlc.graph.the_agents_this_run import TheAgentsThisRun
 from aisdlc.graph.the_prompt_to_supervise_a_repair import THE_AGENT_THAT_SUPERVISES_A_REPAIR
 from aisdlc.llm.model_provider import LlmProvider
 from aisdlc.store.the_register_of_work_items import the_work_item_a_commission_registers
-from aisdlc.store.where_the_register_lives import holding_the_register, the_register_lives_at
+from aisdlc.store.where_the_register_lives import holding_the_register
 from aisdlc.tools.what_people_said_about_a_work_item import (
     AComment,
     a_comment_was_left,
@@ -122,7 +122,6 @@ def a_register_and_a_projects_root_under_a_temporary_directory(
     directory the process happened to start in.
     """
     a_temporary_directory = tmp_path_factory.mktemp("this-run-repaired")
-    the_register_lives_at(a_temporary_directory / "the-register.sqlite3")
     return a_temporary_directory / "projects"
 
 
