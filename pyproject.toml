@@ -82,6 +82,11 @@ ignore = ["D203", "D213"]
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["D", "ANN", "S101", "PLR2004", "SLF001", "S603", "S607"]
 "src/aisdlc/tools/run_command.py" = ["S603"]
+# `S603` and `S607` ask whether a value reached a process rather than data, and this file's answer
+# is that every value is a branch name this run itself created and a path to the clone it cloned.
+# `git` is named partially because there is one `git` on this machine and the alternative is a
+# path read from the environment, which is a path a deployment can change and a delivery should not.
+"src/aisdlc/tools/rebase_the_branch_a_run_pushed.py" = ["S603", "S607"]
 # `S608` asks whether a value reached a query as text rather than as a bound parameter, and the
 # answer here is that no value ever does. Every query interpolates `_THE_WORK_ITEM_COLUMNS`,
 # which is a module constant listing column names this file wrote, and every value a caller

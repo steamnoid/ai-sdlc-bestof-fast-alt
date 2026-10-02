@@ -594,6 +594,7 @@ Stated rather than left to be discovered.
 
   | the default suite, no network and no credential | what it holds this repository to |
   |---|---|
+  | `test_a_rebase_lands_this_runs_commit.py` | that a rebase lands this run's commit on the branch it joins, moves nothing else, and leaves the clone usable when git cannot finish |
   | `test_a_merge_lands_one_commit_and_says_so.py` | that a merge lands the one commit anything proved, that `mergeable` is read before anything is pushed at the pull request, and that `null` is neither yes nor no |
   | `test_the_suite_went_green_on_the_commit_being_merged.py` | that a merge is justified by the checks on the sha the pull request reports, and that four different refusals stay four different facts |
   | `test_every_prompt_writing_a_path_says_where_a_path_starts.py` | that every prompt whose answer carries a path also says where a path starts — said once, because six prompts with their own wording drift |
