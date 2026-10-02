@@ -50,12 +50,12 @@ from aisdlc.domain.repository import Repository
 from aisdlc.domain.role import Role
 from aisdlc.domain.work_item import a_work_item_commissioned_for_an_agent
 from aisdlc.graph.agent_state import AgentState
-from aisdlc.graph.merge_node import merge_the_delivery_in_this_run
-from aisdlc.graph.router import THE_RUN_IS_OVER
-from aisdlc.graph.settle_a_conflict_node import (
+from aisdlc.graph.merge_node import (
     WHERE_THE_CONFLICT_IS_SETTLED,
-    settle_a_conflict_in_this_run,
+    merge_the_delivery_in_this_run,
 )
+from aisdlc.graph.router import THE_RUN_IS_OVER
+from aisdlc.graph.settle_a_conflict_node import settle_a_conflict_in_this_run
 from aisdlc.graph.suite_node import WHERE_THE_SUITE_IS_ASKED_ABOUT
 from aisdlc.tools.github_clone_repository import ClonedRepository
 from aisdlc.tools.github_create_pull_request import AnOpenedPullRequest

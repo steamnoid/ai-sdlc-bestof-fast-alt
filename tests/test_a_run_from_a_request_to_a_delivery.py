@@ -57,6 +57,7 @@ from aisdlc.domain.stage import Stage
 from aisdlc.domain.work_item import a_work_item_commissioned_for_an_agent
 from aisdlc.graph.lifecycle import a_config, the_lifecycle
 from aisdlc.graph.router import WHERE_AN_APPROVED_ARTIFACT_LEADS
+from aisdlc.graph.settle_a_conflict_node import RebaseTheBranchARunPushed
 from aisdlc.graph.supervise_a_repair import (
     WHERE_THE_IMPLEMENTATION_IS_REWRITTEN,
     WHERE_THE_PLAN_IS_REWRITTEN,
@@ -75,6 +76,7 @@ from aisdlc.tools.github_clone_repository import RepositoryToClone
 from aisdlc.tools.github_create_branch import PushedBranch
 from aisdlc.tools.github_create_pull_request import AnOpenedPullRequest
 from aisdlc.tools.merge_a_pull_request import WhatTheMergeLanded
+from aisdlc.tools.rebase_the_branch_a_run_pushed import WhatTheRebaseLanded
 from aisdlc.tools.run_tests import SuiteOutcome
 from aisdlc.tools.the_suite_went_green import WhatTheSuiteSaid
 from aisdlc.tools.why_the_suite_may_not_be_merged import (
@@ -524,8 +526,29 @@ def test_a_run_whose_commit_nothing_proved_does_not_say_it_delivered(
     )
 
 
+def _a_rebase_no_test_in_this_file_asked_for() -> RebaseTheBranchARunPushed:
+    """A rebase this harness will not perform, because no test in this file asked for one.
+
+    **Loud rather than silent, and that is the whole of it.** A double that returned a landed
+    commit would let a test reach `DONE` on a branch it never replayed — the harness's other
+    doubles all report only what they were asked to do, and this one has nothing to report.
+    """
+
+    def refusing(*arguments: object) -> WhatTheRebaseLanded:
+        raise AssertionError(
+            "this run reached the conflict repair and rebased, and no test in this file asked for "
+            "a conflict. Either the merge double above was made to refuse as one, or the graph "
+            "sent the run here on its own — and the second is the worse of the two"
+        )
+
+    return refusing
+
+
 def _a_delivery_that_only_writes_down(
-    clone_path: Path, ask_whether_the_suite_went_green=None, merge_the_pull_request=None
+    clone_path: Path,
+    ask_whether_the_suite_went_green=None,
+    merge_the_pull_request=None,
+    rebase_the_branch_a_run_pushed=None,
 ) -> TheDeliveryOfThisRun:
     """The second replacement: a delivery that reports what it would have done.
 
@@ -558,6 +581,10 @@ def _a_delivery_that_only_writes_down(
                     what_github_said="this double does not merge, and says so",
                 )
             )
+        ),
+        rebase_the_branch_a_run_pushed=(
+            rebase_the_branch_a_run_pushed
+            or _a_rebase_no_test_in_this_file_asked_for()
         ),
     )
 

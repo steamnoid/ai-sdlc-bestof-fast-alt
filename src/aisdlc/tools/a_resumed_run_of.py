@@ -122,6 +122,7 @@ def _the_state_of(
         "the_commit_anything_proved": None,
         "which_checks_went_green": None,
         "the_commit_that_landed": None,
+        "the_conflict_that_stopped_this_merge": None,
         "written_files": None,
         "opened_pull_request": None,
         "repair": None,

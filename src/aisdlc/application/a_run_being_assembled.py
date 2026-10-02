@@ -210,6 +210,7 @@ def a_run_beginning_at(
         "the_commit_anything_proved": None,
         "which_checks_went_green": None,
         "the_commit_that_landed": None,
+        "the_conflict_that_stopped_this_merge": None,
         "requested_stage": work_item.stage,
         "requested_agent": None,
         "requested_role": work_item.role,

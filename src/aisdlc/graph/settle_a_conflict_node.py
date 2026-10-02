@@ -31,13 +31,15 @@ from aisdlc.agents.what_to_do_when_a_pull_request_will_not_merge import (
     the_question_about_a_conflict_in_these_words,
 )
 from aisdlc.graph.agent_state import AgentState
-from aisdlc.graph.merge_node import NothingWasProvedAboutAnyCommitError
+from aisdlc.graph.merge_node import (
+    NothingWasProvedAboutAnyCommitError,
+)
 from aisdlc.graph.router import THE_RUN_IS_OVER
 from aisdlc.graph.suite_node import WHERE_THE_SUITE_IS_ASKED_ABOUT
 from aisdlc.llm.asking_a_model_for import ask_a_model_for
+from aisdlc.llm.llm_configuration import a_configuration_from_the_environment
+from aisdlc.llm.model_factory import a_model_for
 from aisdlc.tools.rebase_the_branch_a_run_pushed import WhatTheRebaseLanded
-
-WHERE_THE_CONFLICT_IS_SETTLED = "settle_the_conflict_in_this_run"
 
 RebaseTheBranchARunPushed = Callable[[Path, str, str, str], WhatTheRebaseLanded]
 """The rebase, and the four facts it is asked with, in the order it is asked with them.
@@ -174,3 +176,32 @@ class TheRunHasNoCloneToRebaseInError(Exception):
     handed no directory would be a `git` call in whatever the process considers its working
     directory.
     """
+
+
+SettleAConflictInThisRun = Callable[[AgentState, str], Command]
+"""The conflict repair, and the refusal it settles — the state and the words GitHub used."""
+
+
+def the_repair_chosen_using_the_configured_model(
+    rebase_the_branch: RebaseTheBranchARunPushed,
+) -> SettleAConflictInThisRun:
+    """The real repair: the model the deployment's environment names, and the rebase beside it.
+
+    **A factory rather than a model read inside the node**, for the reason every other agent here
+    has one: the graph is handed a function and does not know how a model is obtained. A node
+    that read `AISDLC_*` itself would be a node that cannot be exercised without a deployment.
+
+    **And a model per call rather than one built here**, because a run that settles a conflict
+    once has no second model to reuse and a stale one would be a model from a different
+    configuration answering about a different run.
+    """
+
+    def settling(the_run: AgentState, the_conflict_as_it_was_refused: str) -> Command:
+        return settle_a_conflict_in_this_run(
+            the_run,
+            a_model_for(a_configuration_from_the_environment()),
+            rebase_the_branch,
+            the_conflict_as_it_was_refused,
+        )
+
+    return settling
