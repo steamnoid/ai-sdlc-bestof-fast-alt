@@ -227,8 +227,7 @@ def the_work_item_a_commission_registers(
         return _a_work_item_from(already)
 
     connection.execute(
-        "INSERT INTO work_items"
-        f" ({_THE_WORK_ITEM_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        f"INSERT INTO work_items ({_THE_WORK_ITEM_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         _a_row_for(work_item, 0),
     )
     connection.commit()
@@ -270,10 +269,16 @@ def the_work_item_is_recorded_at(
         raise NoSuchWorkItemError(where_it_is_now.work_item_id)
 
     if the_row["stage"] != where_it_was.stage.name:
+        # **The row's stage and not the caller's, and that was measured rather than argued.** A
+        # refusal once said *"the register holds it at IN_PROGRESS_BY_AGENT"* while the register
+        # held `READY`, because it named where the caller was going rather than where the register
+        # was. **A refusal that names the wrong stage sends a reader to inspect a state the work
+        # item was never in** — which is the one thing this class exists to prevent, and the row
+        # has been read on the line above, so the fact was in hand.
         raise StaleWorkItemError(
             where_it_is_now.work_item_id,
-            _version_of(where_it_was),
-            _version_of(where_it_is_now),
+            where_it_was.stage.name,
+            the_row["stage"],
         )
 
     connection.execute(
@@ -292,11 +297,13 @@ def the_work_item_is_recorded_at(
 
 
 def _version_of(work_item: WorkItem) -> str:
-    """The stage a work item is at, rendered for a refusal that names two of them.
+    """The stage a work item is at, and the name says the other thing.
 
-    **The stage and not a counter, on purpose.** A reader of a refusal needs to know *where the
-    disagreement is*, and "you thought it was at AWAITING_AGENT_PICKUP" answers that while
-    "you had version 2" does not.
+    **Left alone and not renamed, because the refusal now reads the row directly** and this is
+    called from nowhere else. A name that promises a counter and returns a stage is a small lie in
+    a function that reads as though it were about concurrency, and it is worth renaming the next
+    time this file is opened for another reason — **recording that it is wrong is not the same as
+    fixing it, and saying so here is the honest half.**
     """
     return work_item.stage.name
 
@@ -320,9 +327,7 @@ def _a_move_was_recorded(
     )
 
 
-def the_work_item_registered_at(
-    connection: sqlite3.Connection, work_item_id: str
-) -> WorkItem:
+def the_work_item_registered_at(connection: sqlite3.Connection, work_item_id: str) -> WorkItem:
     """What the register says about one work item, or a refusal that it does not hold it."""
     _prepared(connection)
     found = connection.execute(
