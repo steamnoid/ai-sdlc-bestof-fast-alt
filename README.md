@@ -887,3 +887,47 @@ twice over.
 **Eight gates, one policy, no person.** Every approval is signed
 `autopilot:review-what-the-run-found`, the work item ended at `DONE`, and `summary.md` names all
 eight artifacts with the grounds for each. Nothing in the record claims a person decided anything.
+
+---
+
+## A correction: the self-contradicting `Requirements` is not a defect, and I called it one
+
+**Run 5 was refused because its `Requirements` both decided a placement and declared the same
+placement undetermined.** I wrote that up here as a missing rule — no validation stops a
+requirement and an open ambiguity from disagreeing — and listed it as work to do. **That was
+wrong, and the code says so in twenty lines.**
+
+`plan_the_change.py` carries every ambiguity to the person who rules on the plan, marked:
+
+```python
+if ambiguity.does_it_block_the_work:
+    return f"[only a person can answer] {ambiguity.what_is_undetermined"
+```
+
+and the docstring above it is explicit that **not stopping is the point**:
+
+> So the ambiguity travels to the person who rules on the plan, marked, instead of stopping
+> the run on a model's guess about it.
+
+**A run that refuses plannable work delivers nothing, and every gate passes while it does.** That
+is recorded here from six real runs: one stopped on a request to change one word on a home page
+because nobody had said whether to keep the emoji, and another on a request that named its own
+test file because the inspection had not shown it. So a deterministic refusal — "a requirement
+may not decide what an open ambiguity defers" — would **reinstate precisely the refusal this
+repository deleted on evidence**, and it would reinstate it for a contradiction a human was always
+going to be shown at the plan gate.
+
+**What actually happened in run 5 is the gate working one gate earlier than designed.** The
+policy read the artifact, found it unsatisfiable, and stopped the run before any code was
+written. The design intended for a person to find that at gate six. It is the same catch, made
+cheaper, by something reading the same words.
+
+So the honest finding is not "a rule is missing". It is that **this gate catches at gate two what
+the design expects to be caught at gate six**, and the cost of that is one run per contradiction
+— which is the correct price and the reason six of twelve runs ended where they did. There is
+nothing here to fix, and a rule that looked like a fix would be a regression wearing one.
+
+**And the general lesson is the one this repository keeps re-learning:** a red run is a fact about
+a request until proven otherwise, and eleven of the twelve refusals this deployment produced were
+about the requests. The two that were about the code — the supervisor's `ValidationError` and the
+checkout that ran in the wrong repository — are the two that were worth a cycle each.
