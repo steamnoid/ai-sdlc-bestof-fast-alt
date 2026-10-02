@@ -1062,3 +1062,35 @@ guard. Both of these looked like gaps on a fast read and were covered. The three
 out to be real defects — the supervisor's `ValidationError`, the `git checkout` in the wrong
 repository, and a test that could not pass — were all found by running something, and two of the
 three by running the wrong thing on purpose.
+
+---
+
+## A rule landed in the same branch as the tests that could not satisfy it, and `pytest -q` stayed green
+
+The `build_system` rule — *a bare tool's name is not what the build runs on* — arrived in this
+branch from a real run, where a model answered `npm` and was refused. **I brought it here and did
+not run the real tier over what it touched.** Six commits later, running
+`tests/e2e/test_review_an_artifact.py` produced **12 errors**, all of them this:
+
+```
+ValidationError: 1 validation error for DiscoveryReport
+build_system
+  Value error, build_system is 'npm', which names a tool and nothing else.
+```
+
+The fixture built its `DiscoveryReport` with `build_system="npm"` — a value the new production rule
+forbids, and the reason the test could not even construct its input.
+
+**And `pytest -q` reported 106 passed through all of it.** Not one of those 106 tests builds a
+`DiscoveryReport`, because that is an agent the default tier does not exercise. **A production rule
+can land, be correct, break twelve real-tier tests, and leave the default suite green** — because
+the default suite and the real tier share the assertions and not the fixtures, and a rule about
+what an agent produces is only reachable by something that produces one.
+
+`npm ci` is what this repository actually runs, so the fix makes the fixture *true* rather than
+merely acceptable — and the comment above it says why, because `"npm"` is the shorter answer and
+the next person to read it would prefer it.
+
+**The honest reading is about my own loop, not about the rule.** The rule is right; the discovery
+it came from is right; and I merged three PRs and two deliveries while never running the tier that
+would have told me. The tier is opt-in and nothing reminds you it exists except this paragraph.
