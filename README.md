@@ -1095,3 +1095,50 @@ the next person to read it would prefer it.
 **The honest reading is about my own loop, not about the rule.** The rule is right; the discovery
 it came from is right; and I merged three PRs and two deliveries while never running the tier that
 would have told me. The tier is opt-in and nothing reminds you it exists except this paragraph.
+
+---
+
+## The only reasoning node with no correction loop, and the model that answers `None`
+
+Running the real tier over the last unrun file found it. `propose_the_work_this_repository_shows`
+was the **only** node in this package that invoked its model once and handed whatever came back to
+`model_validate`:
+
+```python
+the_answer = TheWorkARepositoryShowsAnswer.model_validate(
+    ask_a_model_for(the_model, TheWorkARepositoryShowsAnswer).invoke(
+        the_prompt_to_propose_the_work_this_repository_shows(report)
+    )
+)
+```
+
+Every other one — `discover_the_repository`, `analyze_the_repository`, `brief_this_repository`,
+`plan_the_change` — loops on `may_this_run_keep_asking`, catches `ValidationError`, and tells the
+model what was wrong. **This deployment's model returns `None` routinely, and its own `.env` says so
+in advance and sets `AISDLC_CORRECTION_BUDGET=0` so the budget is unlimited — and this was the one
+node that never consulted it.** Four tests errored on one run while every other agent on that run
+was unaffected.
+
+**And the retry would have had nothing to say.** The prompt took only the report, so there was
+nowhere to render a correction. A model asked the same question twice with no word about why the
+first answer was refused answers it the same way twice — so the loop alone would have bought
+retries that repeated the same mistake. The test asserts on the *second question's content*, not
+on the number of calls, because that is the half that makes a retry worth anything.
+
+**One `# type: ignore` in this cycle, and it is the honest annotation.** `else: raise last` follows
+a `while` that can only complete without a `break` when `last` is set, and mypy cannot see that
+through `while`/`else`.
+
+## And the same rule broke a second file, which I fixed one occurrence at a time
+
+`MANIFESTS_NAMING_A_BUILD_SYSTEM` had six entries and **four of them were bare nouns** — `npm`,
+`Cargo`, `Maven`, `Gradle` — every one of which the `build_system` rule refuses. So the same rule
+that produced 12 errors in `test_review_an_artifact.py` produced **16 more** in this file, in the
+same run, and I had already merged the first fix. Every entry now names a command, which is both
+what the rule asks for and what those build systems actually run.
+
+**The lesson is not about the rule and it is not about `ruff format` this time.** It is that a rule
+landing in production code will find every fixture, and fixing the occurrence in front of you is
+how you learn how many there were the slow way. The second fix is in the same RED commit as the
+one that found it, and both are verified against a real model: **4 passed, 12 skipped**, where there
+had been 12 errors and then 4 errors and now nothing.
