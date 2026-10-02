@@ -160,6 +160,7 @@ def _the_suite_with_the_change_put_back(
                 program="git",
                 arguments=["checkout", revision, "--", *the_files_the_plan_changed],
                 seconds_it_may_take=A_MINUTE,
+                working_directory=str(clone.path),
             )
         )
 

@@ -612,6 +612,7 @@ Stated rather than left to be discovered.
   | `test_every_field_a_stage_asks_for_is_a_field_the_answer_has.py` | that every stage's question names only fields the artefact has — the planner asked for `what_it_expectes_next`, which no type has |
   | `test_a_build_system_names_what_the_build_runs_on.py` | that the question asks what the build runs on, and that `build_system: npm` is refused — two real runs were stopped at their first gate over that field |
   | `test_what_an_inspection_says_it_did_not_show_is_every_file_it_did_not_show.py` | that every source file not read is named under *what was not shown*, including the ones a name filter never selected |
+  | `test_the_change_is_taken_back_inside_the_clone.py` | that the suite is answered on the clone without the change, and not on whatever repository the process happens to be standing in |
   | `test_a_reader_does_not_commit_a_write_it_did_not_make.py` | that a reader of the register does not commit a write it did not make, which is what every `_prepared` did while a board polled a run |
   | `test_a_supervisor_that_cannot_answer_stops_the_run_with_a_reason.py` | that a repair supervisor whose answer cannot validate stops the run by refusing, naming the agents the model forgot, and leaves the reason on the card |
   | `test_every_stage_reasoning_about_a_file_is_shown_it.py` | that every stage reading a repository is shown what is *inside* the files, and that the set of such stages is derived from the signatures rather than written out |
