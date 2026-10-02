@@ -213,9 +213,7 @@ def _the_agents_no_model_would_produce() -> TheAgentsThisRun:
         # **An account and no finding, never an empty report.** A report with neither is refused
         # by the artifact's own rule, because a reader cannot tell a repository that was
         # examined and found clean from one no analyst ever looked at.
-        return SecurityReport(
-            nothing_found_because="one commit of markdown and one trivial test"
-        )
+        return SecurityReport(nothing_found_because="one commit of markdown and one trivial test")
 
     def plan(
         requirements, clone, repository, what_the_suite_announced=""
@@ -237,9 +235,7 @@ def _the_agents_no_model_would_produce() -> TheAgentsThisRun:
         )
         return ADeliveredChange(
             written=[
-                FileToWrite(
-                    path="health.py", content="def health():\n    return {'ok': True}\n"
-                )
+                FileToWrite(path="health.py", content="def health():\n    return {'ok': True}\n")
             ],
             verification=VerificationReport(
                 suite_before_the_change=a_suite_that_passed,
@@ -306,9 +302,7 @@ def _cloning_from_a_local_repository(the_bare: Path):
     def planning(source: Repository, into: Path) -> RepositoryToClone:
         return RepositoryToClone(
             repository=source,
-            addresses=Addresses(
-                fetch_from=str(the_bare), origin_of_the_code=str(the_bare)
-            ),
+            addresses=Addresses(fetch_from=str(the_bare), origin_of_the_code=str(the_bare)),
             into=into,
         )
 
@@ -380,9 +374,7 @@ def test_a_run_started_from_the_board_reaches_delivered(
 
         already_answered: set[str] = set()
         for gate in range(1, _how_many_gates_there_are() + 1):
-            question = _wait_until_the_gate_is_asking(
-                the_board, the_work_item_id, already_answered
-            )
+            question = _wait_until_the_gate_is_asking(the_board, the_work_item_id, already_answered)
             already_answered.add(question["artifact_id"])
 
             answered = the_board.post(
@@ -393,9 +385,7 @@ def test_a_run_started_from_the_board_reaches_delivered(
                     "reason": "it answers the request",
                 },
             )
-            assert answered.status_code == 200, (
-                f"gate {gate} refused the answer: {answered.text}"
-            )
+            assert answered.status_code == 200, f"gate {gate} refused the answer: {answered.text}"
 
         _wait_until_the_run_has_finished(the_board, the_work_item_id)
 
@@ -673,6 +663,8 @@ def _wait_until(what_to_read, what_to_say_when_it_never_became_true: str):
     pytest.fail(
         f"{what_to_say_when_it_never_became_true}, after {HOW_LONG_A_SMOKE_MAY_WAIT_IN_SECONDS}s"
     )
+
+
 def test_an_implementer_that_wrote_nothing_is_sent_back_and_the_run_delivers(
     a_repository_to_clone_into: Path, a_register_and_a_projects_root, tmp_path: Path
 ) -> None:
@@ -757,9 +749,7 @@ def test_an_implementer_that_wrote_nothing_is_sent_back_and_the_run_delivers(
 
     _, the_projects_root = a_register_and_a_projects_root
     the_gates_it_asked_about: list[str] = []
-    _walk_the_run_to_the_end(
-        the_graph, the_work_item, the_projects_root, the_gates_it_asked_about
-    )
+    _walk_the_run_to_the_end(the_graph, the_work_item, the_projects_root, the_gates_it_asked_about)
 
     with holding_the_register() as register:
         the_stage_the_register_holds = the_work_item_registered_at(
@@ -908,14 +898,10 @@ def test_a_red_suite_reaches_the_supervisor_and_the_run_delivers_afterwards(
         """
         how_many_times_the_change_was_attempted["count"] += 1
         the_suite_after = (
-            a_red_suite
-            if how_many_times_the_change_was_attempted["count"] == 1
-            else a_green_suite
+            a_red_suite if how_many_times_the_change_was_attempted["count"] == 1 else a_green_suite
         )
         return ADeliveredChange(
-            written=[
-                FileToWrite(path="health.py", content="def health():\n    return 1\n")
-            ],
+            written=[FileToWrite(path="health.py", content="def health():\n    return 1\n")],
             verification=VerificationReport(
                 suite_before_the_change=a_green_suite, suite_after_the_change=the_suite_after
             ),
@@ -955,9 +941,7 @@ def test_a_red_suite_reaches_the_supervisor_and_the_run_delivers_afterwards(
         the_work_item_a_commission_registers(register, the_work_item)
 
     the_gates_it_asked_about: list[str] = []
-    _walk_the_run_to_the_end(
-        the_graph, the_work_item, the_projects_root, the_gates_it_asked_about
-    )
+    _walk_the_run_to_the_end(the_graph, the_work_item, the_projects_root, the_gates_it_asked_about)
 
     with holding_the_register() as register:
         the_stage_the_register_holds = the_work_item_registered_at(

@@ -40,13 +40,9 @@ from pathlib import Path
 from aisdlc.domain.repository import Repository
 from aisdlc.tools.github_clone_repository import (
     ClonedRepository,
-    a_repository_to_clone,
-    clone_repository,
 )
-from aisdlc.tools.github_client import Addresses, the_clone_url_of
 from aisdlc.tools.inspect_the_repository import (
     DIRECTORIES_THAT_HOLD_SOMEONE_ELSES_CODE,
-    FILES_NAMED_WITHOUT_AN_EXTENSION,
     HOW_DEEP_THE_SEARCH_GOES,
     SUFFIXES_THAT_MAY_BE_SOURCE,
     an_inspection_of_the_code,
@@ -102,7 +98,7 @@ def _every_source_file_in_the_clone(a_clone: ClonedRepository) -> set[str]:
 def test_every_source_file_that_was_not_shown_is_named_as_not_shown(
     tmp_path: Path,
 ) -> None:
-    """A source file the name filter skipped is still named in the section that says what is missing.
+    """A source file the name filter skipped is still named under what was not shown.
 
     **The claim is about the union of two sets, and both halves are needed.** The inspection says
     nothing was withheld, *and* a file nobody has seen is missing from that statement — and those
