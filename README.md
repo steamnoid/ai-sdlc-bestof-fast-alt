@@ -612,7 +612,7 @@ Stated rather than left to be discovered.
   | `test_every_field_a_stage_asks_for_is_a_field_the_answer_has.py` | that every stage's question names only fields the artefact has — the planner asked for `what_it_expectes_next`, which no type has |
   | `test_a_build_system_names_what_the_build_runs_on.py` | that the question asks what the build runs on, and that `build_system: npm` is refused — two real runs were stopped at their first gate over that field |
   | `test_what_an_inspection_says_it_did_not_show_is_every_file_it_did_not_show.py` | that every source file not read is named under *what was not shown*, including the ones a name filter never selected |
-  | `test_the_change_is_taken_back_inside_the_clone.py` | that the suite is answered on the clone without the change, and not on whatever repository the process happens to be standing in |
+  | `test_the_change_is_taken_back_inside_the_clone.py` | that the suite is answered on the clone without the change |
   | `test_a_reader_does_not_commit_a_write_it_did_not_make.py` | that a reader of the register does not commit a write it did not make, which is what every `_prepared` did while a board polled a run |
   | `test_a_supervisor_that_cannot_answer_stops_the_run_with_a_reason.py` | that a repair supervisor whose answer cannot validate stops the run by refusing, naming the agents the model forgot, and leaves the reason on the card |
   | `test_every_stage_reasoning_about_a_file_is_shown_it.py` | that every stage reading a repository is shown what is *inside* the files, and that the set of such stages is derived from the signatures rather than written out |
@@ -835,3 +835,55 @@ prompt forbidding contents may have been protecting something I have not measure
 implementer being *told* what to write is a different prompt from the planner being *allowed* to
 say it. That is a decision about the glossary and a cycle of its own, recorded here rather than
 taken quietly at the end of a run.
+
+---
+
+## A pull request, and the one line that had to be fixed before there could be one
+
+[PR #10](https://github.com/paligakrzychu/wellbeing-tracker-public/pull/10) on
+`paligakrzychu/wellbeing-tracker-public`, branch
+`aisdlc/wellbeing-tracker-public-in-github-workflows-ci-yml-add-one-step-whose-ru-20261002-084127`,
+**2 files, +108/−0**. Written by `aisdlc-dev-impl` from a plan a policy approved, verified in a
+container on both sides of the change, on a real clone of a real repository.
+
+**The change itself:** `.github/workflows/ci.yml` gained a step running `npm run typecheck`, and
+`tests/unit/ci-typecheck-step.test.ts` reads that workflow as raw text and fails when the step is
+gone. The repository has had the `typecheck` script and never ran it — `vitest run` typechecks only
+the files some test happens to import, so an error in a file nothing imports was a green run. The
+step's own comment says as much, and it was written by the agent.
+
+**And the three suite runs are the whole argument for this system:**
+
+| | Result |
+|---|---|
+| before the change | **74 passed**, 9 skipped |
+| after the change | **77 passed**, 9 skipped |
+| **with the change taken back out** | **2 failed** \| 75 passed |
+
+That third line is what separates "the suite passes" from "the change is observed". It only
+happened because `git checkout HEAD~1 -- .github/workflows/ci.yml` ran **in the clone**.
+
+**Which it did not, in run 11, and that is what this section is really about.** The command was
+built without a `working_directory`, so it ran against the repository the process was standing in
+— this one — and was answered `error: pathspec '.github/workflows/ci.yml' did not match any
+file(s) known to git`. The restore afterwards did nothing either. So run 11 had the suite green
+on both sides of a checkout that never happened, could not show its change was observed, and
+stopped at the supervisor with six gates behind it. **One missing argument, and the evidence that
+a change does anything was silently absent from the delivery.**
+
+The sibling that commits the change passes `working_directory` for all three of its commands, so
+the author knew and this call site was missed — and nothing compared the two. That comparison is
+now `test_the_change_is_taken_back_inside_the_clone.py`, which builds two real repositories, moves
+the process into the wrong one, and reads the clone's file **while the suite is being answered** —
+afterwards the file is correct again either way, because the change is restored in a `finally` on
+purpose, so a test that looked there would have passed against the defect.
+
+**What the run cost, in full:** twelve runs to a delivery. Six refusals, all correct. One
+supervisor crash (raw `ValidationError`, now a named refusal carrying the validator's own words —
+run 11 is the proof it works). One checkout aimed at the wrong repository. **Two wrong requests of
+mine**, each caught by the gate before any code was written, which is the gate earning its place
+twice over.
+
+**Eight gates, one policy, no person.** Every approval is signed
+`autopilot:review-what-the-run-found`, the work item ended at `DONE`, and `summary.md` names all
+eight artifacts with the grounds for each. Nothing in the record claims a person decided anything.
