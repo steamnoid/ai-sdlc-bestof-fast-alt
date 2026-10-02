@@ -37,6 +37,7 @@ from pydantic import BaseModel, ConfigDict
 from aisdlc.tools.why_a_rebase_did_not_land import (
     TheBranchMovedUnderThisRunError,
     TheRebaseWasNotFinishedError,
+    TheRebaseWouldChangeNothingError,
 )
 
 WHERE_THIS_RUNS_BRANCH_LIVES = "origin"
@@ -74,6 +75,7 @@ def rebase_the_branch_a_run_pushed(
     same facts until the recursion limit stops it.
     """
     _fetch(the_clone, the_branch_it_joins)
+    _refuse_a_rebase_with_nothing_to_replay(the_clone, this_runs_branch, the_branch_it_joins)
 
     _the_rebase_carried_out(the_clone, this_runs_branch, the_branch_it_joins)
     what_git_said = _the_branch_pushed_back(
@@ -98,6 +100,40 @@ def _fetch(the_clone: Path, the_branch_it_joins: str) -> None:
         "--quiet",
         WHERE_THE_BRANCH_IT_JOINS_LIVES,
         the_branch_it_joins,
+    )
+
+
+def _refuse_a_rebase_with_nothing_to_replay(
+    the_clone: Path, this_runs_branch: str, the_branch_it_joins: str
+) -> None:
+    """Refuse when the branch this run's work joins is already behind this run's branch.
+
+    **`merge-base --is-ancestor` and not a count of commits.** The question is *is the joined
+    branch already contained in this one*, and a count answers a different one: this run's branch
+    is one commit ahead whether it joined the other one or not. A first cut compared the output of
+    `rev-list --count` against a sha, which never matches, so **every rebase was refused as having
+    nothing to replay** — and the test that caught it is the one that had a rebase to do.
+
+    **Said before the rebase and not after, because a rebase that changes nothing succeeds.** Git
+    would report a successful rebase of a branch onto its own ancestor, and this run would go
+    round again — so the one thing worth checking is the one thing git will not tell you.
+    """
+    already_joined = _git_may_fail(
+        the_clone,
+        "merge-base",
+        "--is-ancestor",
+        f"{WHERE_THE_BRANCH_IT_JOINS_LIVES}/{the_branch_it_joins}",
+        this_runs_branch,
+    )
+
+    if already_joined.returncode != 0:
+        return
+
+    raise TheRebaseWouldChangeNothingError(
+        f"{this_runs_branch} already contains {the_branch_it_joins}, so there is nothing to "
+        f"replay onto it. A rebase here would succeed, change nothing, and leave the pull request "
+        "in front of the same conflict — and the run would arrive at this repair again with the "
+        "same facts until the runtime's recursion limit stopped it"
     )
 
 
