@@ -214,7 +214,33 @@ def _walk(
     continued and a run being started from nothing differ in exactly one thing, and a walk that
     built its own state could only ever do the second — which is how two hundred lines of correct
     reconstruction code sat in `tools/` with nothing able to reach it.
+
+    **And anything a node raises ends the walk as a sentence, because this is a terminal.** The
+    two commands that lead here each catch two named refusals, and the rest used to arrive as a
+    LangGraph `[NOTE]` and a stack — which is precisely what their own docstrings say a terminal
+    reader should not be handed. **A blanket catch is right here and wrong everywhere else**: in the
+    graph a narrow clause is what keeps a run from arriving somewhere it cannot be acted on, while
+    here there is nowhere further to route and one reader who is not a developer. The work item is
+    named, because *this failed* leaves a person to work out which of their runs it was.
     """
+    try:
+        _the_updates_the_walk_goes_by(
+            the_graph, where_from, the_config, work_item_id, the_work_item, the_project_directory
+        )
+    except Exception as it_stopped:
+        typer.echo(f"{work_item_id} stops here: {it_stopped}")
+        raise typer.Exit(code=2) from None
+
+
+def _the_updates_the_walk_goes_by(
+    the_graph,
+    where_from: AgentState,
+    the_config,
+    work_item_id: str,
+    the_work_item,
+    the_project_directory,
+) -> None:
+    """The updates, so that the catching above wraps the walk and nothing else."""
     for update in the_graph.stream(where_from, the_config):
         for a_node in update:
             typer.echo(f"  {a_node}")
