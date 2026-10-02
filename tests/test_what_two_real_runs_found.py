@@ -244,9 +244,7 @@ def test_the_projects_root_setting_is_the_only_reader_of_its_own_variable() -> N
     place and its register in another, and neither is wrong.
     """
     the_readers: list[str] = []
-    for a_module in (
-        Path(__file__).resolve().parents[1].joinpath("src", "aisdlc").rglob("*.py")
-    ):
+    for a_module in Path(__file__).resolve().parents[1].joinpath("src", "aisdlc").rglob("*.py"):
         if _this_module_reads_the_setting(ast.parse(a_module.read_text(encoding="utf-8"))):
             the_readers.append(a_module.name)
 
@@ -659,7 +657,7 @@ def a_clone_of_a_real_repository(tmp_path: Path):
         "EXPOSE 3000\n"
         "HEALTHCHECK --interval=30s --timeout=3s --retries=3 \\\n"
         "  CMD curl -f http://localhost:3000/ || exit 1\n"
-        "CMD [\"npm\", \"start\"]\n",
+        'CMD ["npm", "start"]\n',
         encoding="utf-8",
     )
     (a_working_copy / ".gitignore").write_text("node_modules\n", encoding="utf-8")

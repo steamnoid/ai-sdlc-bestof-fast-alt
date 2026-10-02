@@ -53,10 +53,17 @@ def _a_client_recording_what_it_was_asked_to_do(
     a tag and one filed without, which is the whole claim.
     """
     what_it_was_asked: list[dict[str, object]] = []
-    the_answer = answer if answer is not None else httpx.Response(201, json={
-        "number": 7,
-        "html_url": "https://github.com/paligakrzychu/wellbeing-tracker-public/pull/7",
-    })
+    the_answer = (
+        answer
+        if answer is not None
+        else httpx.Response(
+            201,
+            json={
+                "number": 7,
+                "html_url": "https://github.com/paligakrzychu/wellbeing-tracker-public/pull/7",
+            },
+        )
+    )
 
     def record(request: httpx.Request) -> httpx.Response:
         import json as json_module
@@ -262,9 +269,7 @@ def test_a_pull_request_is_opened_carrying_the_tag() -> None:
     # after it. Reading `[-1]` here would assert the wrong thing about the wrong call — and the
     # first version of this test did exactly that, which is how it went on passing while every
     # pull request went out untagged.
-    the_openings = [
-        what for what in what_it_was_asked if what["url"].endswith("/pulls")
-    ]
+    the_openings = [what for what in what_it_was_asked if what["url"].endswith("/pulls")]
     assert len(the_openings) == 1, (
         f"expected one pull request to be opened, saw {what_it_was_asked}"
     )
@@ -346,9 +351,7 @@ def test_a_deployment_that_cannot_create_labels_still_delivers() -> None:
     than sent and 422'd — an untagged delivery that succeeds beats a tagged one that does not.
     """
     a_client_that_is_refused_permission, _ = _a_client_recording_what_it_was_asked_to_do(
-        answer=httpx.Response(
-            403, json={"message": "Resource not accessible by integration"}
-        )
+        answer=httpx.Response(403, json={"message": "Resource not accessible by integration"})
     )
 
     the_tag_is_usable = make_sure_the_tag_is_there(
@@ -372,8 +375,7 @@ def test_a_deployment_that_cannot_create_labels_still_delivers() -> None:
                 201,
                 json={
                     "number": 12,
-                    "html_url": "https://github.com/paligakrzychu/"
-                    "wellbeing-tracker-public/pull/12",
+                    "html_url": "https://github.com/paligakrzychu/wellbeing-tracker-public/pull/12",
                 },
             ),
         }
@@ -401,9 +403,7 @@ def test_a_deployment_that_cannot_create_labels_still_delivers() -> None:
         "discards without complaint — so the deployment gets an untagged pull request and a test "
         "that says otherwise"
     )
-    assert not any(
-        what["url"].endswith("/issues/12/labels") for what in what_it_was_asked
-    ), (
+    assert not any(what["url"].endswith("/issues/12/labels") for what in what_it_was_asked), (
         "the code tried to label a pull request on a deployment that was already refused "
         "permission to create labels, which is one more call to GitHub for a known answer"
     )
@@ -470,9 +470,7 @@ def test_a_pull_request_is_labelled_after_it_is_opened_because_github_ignores_th
         "a-credential",
     )
 
-    assert any(
-        what["url"].endswith("/issues/4/labels") for what in what_it_was_asked
-    ), (
+    assert any(what["url"].endswith("/issues/4/labels") for what in what_it_was_asked), (
         "nothing labelled the pull request after it was opened, so it carries no project tag. "
         "Sending `labels` to the create endpoint looks like it works: GitHub answers 201 and "
         "discards the field, and every test that only inspects the request agrees that it did"
@@ -521,9 +519,7 @@ def test_a_pull_request_on_a_repository_that_cannot_be_labelled_still_opens() ->
         "at all — which is worse here than on the issue path, because this call happens after the "
         "work is already on a remote"
     )
-    assert any(
-        what["url"].endswith("/issues/5/comments") for what in what_it_was_asked
-    ), (
+    assert any(what["url"].endswith("/issues/5/comments") for what in what_it_was_asked), (
         "the label never arrived and the pull request says nothing about it, so the only way to "
         "find out is to notice the tag is missing — and the person who would act on that is the "
         "one reading the pull request"

@@ -175,9 +175,7 @@ def test_a_real_model_naming_where_a_run_should_start_again_repairs_the_run(
         how_the_run_ended.append(f"{type(how_it_stopped).__name__}: {how_it_stopped}")
 
     with holding_the_register() as register:
-        the_stage = the_work_item_registered_at(
-            register, the_work_item.work_item_id
-        ).stage
+        the_stage = the_work_item_registered_at(register, the_work_item.work_item_id).stage
 
     assert not any(
         "INVALID_CONCURRENT_GRAPH_UPDATE" in a_reason

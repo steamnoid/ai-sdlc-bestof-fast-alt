@@ -61,30 +61,47 @@ def test_the_question_asks_the_build_system_to_name_what_the_build_runs_on() -> 
     one-word answer.
     """
     the_question = the_prompt_to_discover_a_repository("the inspection", A_REPOSITORY)
+    what_it_says_about_the_build_system = _what_the_question_says_about_a_build_system(the_question)
 
-    what_the_question_says_about_the_build_system = the_question.lower()
+    names_the_field = "build_system" in what_it_says_about_the_build_system
+    asks_for_a_version = "version" in what_it_says_about_the_build_system
+    asks_for_a_runtime = "runtime" in what_it_says_about_the_build_system
 
-    demands_the_runtime = any(
-        a_phrase in what_the_question_says_about_the_build_system
-        for a_phrase in (
-            "what the build runs on",
-            "the runtime it",
-            "version it runs",
-            "version it pins",
-            "which version",
-        )
+    assert names_the_field and asks_for_a_version and asks_for_a_runtime, (
+        f"the question names the field: {names_the_field}, asks for a version: "
+        f"{asks_for_a_version}, asks for a runtime: {asks_for_a_runtime}. It does not say so, so "
+        "the answer that came back was `npm` — one word, and the shortest true one. Everything a "
+        "gate needs to rule on a change about a required runtime was in the report and in no field "
+        "anybody asked for: the repository's Dockerfile pins node:22-bookworm in two FROM lines, "
+        "that Dockerfile is in the report's own key_components, and the architecture_summary "
+        "describes the two-stage image in detail. A refusal at that gate said the report 'never "
+        "records the runtime floors that would bound an engines range', twice, and it was right."
     )
 
-    assert demands_the_runtime, (
-        "the question asks for a build system and nothing more, so the answer that came back was "
-        "`npm` — one word, and the shortest true one. Everything a gate needs to rule on a change "
-        "about a required runtime was in the report and in no field anybody asked for: the "
-        "repository's Dockerfile pins node:22-bookworm in two FROM lines, that Dockerfile is in "
-        "the report's own key_components, and the architecture_summary describes the two-stage "
-        "image in detail. A refusal at that gate said the report 'never records the runtime "
-        "floors that would bound an engines range', twice, and it was right. Ask for what the "
-        "build runs on and the answer carries it; ask for a noun and it does not."
+
+def _what_the_question_says_about_a_build_system(the_question: str) -> str:
+    """The paragraphs of the question that talk about a build system, lowercased.
+
+    **The whole question is not searched, because a word anywhere is not a demand.** The question
+    mentions versions in several places that have nothing to do with the build system — a `FROM`
+    line, an image, a lockfile — so a search over all of it would be satisfied by any of them. What
+    has to carry the demand is the text near the field.
+
+    **Found by proximity to the field name rather than by a phrase I wrote and then forgot.**
+    The first version of this test looked for a list of exact strings, and it failed on a prompt
+    that had been fixed correctly — one of the phrases had markdown asterisks in the middle of it.
+    A test that can fail on correct prose is a test that gets deleted rather than fixed, and the
+    prose is not what is being specified here.
+    """
+    the_paragraphs = the_question.split("\n\n")
+    about_the_build_system = [
+        a_paragraph for a_paragraph in the_paragraphs if "build_system" in a_paragraph
+    ]
+    assert about_the_build_system, (
+        "the question never mentions `build_system` by name, so there is nothing to demand "
+        "anything of and the field is filled by whatever the model puts in it"
     )
+    return " ".join(about_the_build_system).lower()
 
 
 def test_a_build_system_naming_only_the_tool_is_refused() -> None:
