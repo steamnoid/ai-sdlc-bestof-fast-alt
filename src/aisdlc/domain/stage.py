@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from enum import Enum
 
-from aisdlc.store.where_the_register_lives import the_register
-
 
 class Stage(Enum):
     """One lifecycle position of a work item.
