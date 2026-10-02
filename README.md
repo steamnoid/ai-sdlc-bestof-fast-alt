@@ -610,6 +610,7 @@ Stated rather than left to be discovered.
   | `test_a_plan_that_adds_a_file_is_a_plan.py` | that a plan whose whole content is a new file is a plan, and that its refusal names every field it can be empty of |
   | `test_a_test_at_the_repository_root_is_judged_too.py` | that a test at the repository root is judged by the runner's own `include` lines like any other directory |
   | `test_every_field_a_stage_asks_for_is_a_field_the_answer_has.py` | that every stage's question names only fields the artefact has — the planner asked for `what_it_expectes_next`, which no type has |
+  | `test_the_third_question_is_asked_of_a_different_checkout_and_the_run_is_refused` | that the third suite run sees the parent commit's text and exactly the plan's own tests — the shape `apply_the_plan` documents and this file used to deny |
   | `test_a_build_system_names_what_the_build_runs_on.py` | that the question asks what the build runs on, and that `build_system: npm` is refused — two real runs were stopped at their first gate over that field |
   | `test_what_an_inspection_says_it_did_not_show_is_every_file_it_did_not_show.py` | that every source file not read is named under *what was not shown*, including the ones a name filter never selected |
   | `test_the_change_is_taken_back_inside_the_clone.py` | that the suite is answered on the clone without the change |
@@ -982,3 +983,46 @@ wrote it inside `supervise_a_repair` first, and this test caught it there: the s
 seam, every test replaces it, and a guard behind the seam is green through an entire failing run.
 `supervise_a_repair_in_this_run` is what turns the supervisor's answer into a route, so that is
 where the route is checked.
+
+---
+
+## A test in the real tier that could not pass on any run, and had been failing for three
+
+Running the real tier over the two files this branch changed found a test that is **not a test**:
+`test_the_third_question_is_asked_of_a_different_checkout_and_the_run_is_refused` asserts
+
+```python
+what_the_third_run_saw == what_the_first_run_saw
+```
+
+and it cannot pass. **I measured that rather than assumed it:** it fails byte-identically at
+`8745235~1` and at `8745235` — before and after the `working_directory` fix — on a real run with a
+real model. So it is a pre-existing breakage and not a regression, which is the one thing a
+failing real-tier test is most often mistaken for.
+
+**The reason is a rule in `apply_the_plan.py` that is deliberate and written down:**
+
+> Only the files the plan named, and never the tests. The tests are what the question is about —
+> a suite with the tests taken away says nothing either way.
+
+So the third run of the suite — the one that answers "does anything observe the change?" — holds
+the parent commit's text **and** the tests the plan added, because the tests are never put back.
+The first run holds the parent's text and not those tests. **The design requires them to differ,
+and the assertion requires them to be equal.**
+
+**And the contradiction was introduced by the very method written to prevent a false pass.**
+`what_a_run_of_the_suite_could_have_seen` exists because comparing the texts alone says two
+different checkouts are identical; it closed that trap by adding *which files are on the disk*,
+and then the assertion demanded equality on that second half too. Each decision is defensible on
+its own; together they are unsatisfiable. The method's own docstring already records that this file
+failed "on three consecutive runs", which means the trap was seen, half-fixed, and left.
+
+**The fix splits the claim into the two things it is actually made of:** the text went back to the
+parent's, and the only thing the third run holds that the first does not is the plan's own tests.
+A weaker repair — comparing `files_to_change` alone — would pass on a test-only plan, where that
+list is empty, and would observe nothing while reporting success.
+
+**And this is the whole argument for the real tier being a tier.** Nothing in `pytest -q` could
+have found it: 106 tests, no network, no model, all green. The defect is in a test that needs a
+real model, a real clone and a real `git checkout` of a real commit before the assertion is even
+reached — which is exactly the condition §0.4 says a mocked test cannot satisfy.
