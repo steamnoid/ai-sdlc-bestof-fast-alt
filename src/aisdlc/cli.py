@@ -22,6 +22,7 @@ import typer
 
 from aisdlc.application.a_run_being_assembled import (
     ThisRunCannotBeAssembledError,
+    a_run_beginning_at,
     the_graph_for,
 )
 from aisdlc.application.the_runs_this_process_is_holding import TheRunsThisProcessIsHolding
@@ -29,10 +30,13 @@ from aisdlc.approval.approval_decision import ApprovalDecision
 from aisdlc.domain.commissioned_request import a_request_about
 from aisdlc.domain.repository import Repository
 from aisdlc.domain.work_item import a_work_item_commissioned_for_an_agent
+from aisdlc.graph.agent_state import AgentState
 from aisdlc.graph.lifecycle import a_config
+from aisdlc.persistence.the_register_of_work_items import NoSuchWorkItemError
 from aisdlc.store.the_record_of_a_run import what_the_gate_was_asking_about
 from aisdlc.store.what_a_run_records import something_the_run_said, the_work_item_was_commissioned
 from aisdlc.store.where_the_register_lives import holding_the_register, the_register_lives_at
+from aisdlc.tools.a_resumed_run_of import a_resumed_run_of
 from aisdlc.tools.the_project_directory import the_project_directory_of, where_projects_live
 
 aisdlc = typer.Typer(no_args_is_help=True, help="An AI-native SDLC that shows its working.")
@@ -124,21 +128,93 @@ def run(
     typer.echo(f"everything this run writes goes in {the_project_directory}")
     typer.echo("")
 
-    _walk(the_graph, the_config, the_work_item_id, the_work_item, the_project_directory)
+    _walk(
+        the_graph,
+        the_config,
+        the_work_item_id,
+        the_work_item,
+        the_project_directory,
+        a_run_beginning_at(the_work_item, the_projects_root),
+    )
 
 
-def _walk(the_graph, the_config, work_item_id: str, the_work_item, the_project_directory) -> None:
+@aisdlc.command()
+def resume(
+    repository: str = typer.Argument(..., help="owner/name, the way GitHub writes it."),
+    work_item_id: str = typer.Argument(..., help="The run to carry on, as the register names it."),
+) -> None:
+    """Carry on a run whose terminal closed, from what it left on disk.
+
+    **The checkpointer is in memory, so this is the only way back into a lost run.** Everything a
+    run has done is written to the register and to the artifacts beside its clone; nothing else of
+    it survives the process. `a_resumed_run_of` reads both and rebuilds the state, and this command
+    is the door — without it the reconstruction is correct code nobody can reach.
+
+    **And today the door opens onto a room nothing has ever filled, which is said here rather than
+    left to be found.** The per-run `WorkItem.json` this reads is written by
+    `persistence.the_register_of_work_items`, and *no production path calls that one* — a run
+    registers itself in SQLite and nothing writes the file this command needs, so this refuses
+    every work item it is given. **The door is correct and the room is empty**, and the two halves
+    are separate pieces of work: this command, and the composition root writing the register a run
+    leaves behind. Until the second lands, treat this as the refusal it is today.
+
+    **The refusal is a sentence, for the reason `run` already says it out loud.** A terminal
+    reader is a person and a traceback is a thing a person hands to a developer rather than reads.
+    A person who has just lost a terminal is looking for their work, not for a stack.
+    """
+    _open_the_register()
+    the_repository = _a_repository_from(repository)
+    the_projects_root = where_projects_live()
+
+    try:
+        where_from = a_resumed_run_of(the_repository, work_item_id, the_projects_root)
+    except NoSuchWorkItemError as nothing_to_carry_on_from:
+        typer.echo(f"{work_item_id} cannot be carried on from: {nothing_to_carry_on_from}")
+        raise typer.Exit(code=2) from None
+
+    try:
+        the_graph = the_graph_for(the_repository)
+    except ThisRunCannotBeAssembledError as cannot:
+        typer.echo(f"this run cannot continue: {cannot}")
+        raise typer.Exit(code=2) from None
+
+    the_project_directory = the_project_directory_of(where_from["work_item"], the_projects_root)
+
+    typer.echo(f"{work_item_id} · {the_repository.address}")
+    typer.echo(f"carrying on from {the_project_directory}")
+    typer.echo(f"the next thing a person rules on is {where_from['presented_artifact_id']}")
+    typer.echo("")
+
+    _walk(
+        the_graph,
+        a_config(work_item_id),
+        work_item_id,
+        where_from["work_item"],
+        the_project_directory,
+        where_from,
+    )
+
+
+def _walk(
+    the_graph,
+    the_config,
+    work_item_id: str,
+    the_work_item,
+    the_project_directory,
+    where_from: AgentState,
+) -> None:
     """Walk one run to its first gate, and then to the next one for as long as there is one.
 
     **The walk and the gate in one function, because they are one thing in a loop.** A terminal
     is a different kind of gate than a browser: the person is already here, so there is nothing
     to suspend and nothing to resume — a refusal simply ends the walk.
-    """
-    from aisdlc.application.a_run_being_assembled import a_run_beginning_at
 
-    for update in the_graph.stream(
-        a_run_beginning_at(the_work_item, where_projects_live()), the_config
-    ):
+    **The starting state arrives as an argument and is not built here.** A run that is being
+    continued and a run being started from nothing differ in exactly one thing, and a walk that
+    built its own state could only ever do the second — which is how two hundred lines of correct
+    reconstruction code sat in `tools/` with nothing able to reach it.
+    """
+    for update in the_graph.stream(where_from, the_config):
         for a_node in update:
             typer.echo(f"  {a_node}")
 
