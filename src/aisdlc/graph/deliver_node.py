@@ -43,6 +43,7 @@ from aisdlc.tools.our_own_runs import (
 from aisdlc.tools.run_tests import SuiteOutcome
 
 WHERE_THE_RUN_IS_MARKED_DELIVERED = "mark_the_work_item_delivered"
+WHERE_GITHUB_IS_ASKED_ABOUT_THE_COMMIT = "ask_github_whether_the_suite_went_green"
 """The node this one hands to on success, named here because it is part of what this node does.
 
 **There is no edge out of this node, for the same reason there is none out of the node that
@@ -297,7 +298,7 @@ def open_the_delivery(
     a_run_was_delivered(state["work_item"].work_item_id, the_pull_request.address)
 
     return Command(
-        goto=WHERE_THE_RUN_IS_MARKED_DELIVERED,
+        goto=WHERE_GITHUB_IS_ASKED_ABOUT_THE_COMMIT,
         update={"opened_pull_request": the_pull_request},
     )
 

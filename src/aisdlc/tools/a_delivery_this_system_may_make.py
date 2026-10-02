@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from aisdlc.domain.repository import Repository
 from aisdlc.graph.deliver_node import OpenThePullRequest, PushTheBranch
+from aisdlc.graph.suite_node import AskWhetherTheSuiteWentGreen
 from aisdlc.graph.the_delivery_of_this_run import TheDeliveryOfThisRun
 from aisdlc.tools.github_client import a_github_client, the_credential
 from aisdlc.tools.github_clone_repository import ClonedRepository
@@ -34,6 +35,7 @@ from aisdlc.tools.github_create_pull_request import (
     open_a_pull_request,
 )
 from aisdlc.tools.github_fork_repository import the_account_we_fork_into
+from aisdlc.tools.the_suite_went_green import WhatTheSuiteSaid, the_suite_went_green
 
 
 def the_delivery_this_system_may_make(repository: Repository) -> TheDeliveryOfThisRun:
@@ -49,6 +51,9 @@ def the_delivery_this_system_may_make(repository: Repository) -> TheDeliveryOfTh
         our_copy=our_copy,
         push_the_branch=_a_branch_pusher(our_copy),
         open_the_pull_request=_a_pull_request_opener(),
+        ask_whether_the_suite_went_green=_someone_who_asks_github_whether_the_suite_went_green(
+            our_copy
+        ),
     )
 
 
@@ -66,6 +71,25 @@ def _a_branch_pusher(our_copy: Repository) -> PushTheBranch:
         )
 
     return pushing
+
+
+def _someone_who_asks_github_whether_the_suite_went_green(
+    our_copy: Repository,
+) -> AskWhetherTheSuiteWentGreen:
+    """Ask GitHub about the commit the delivery pushed, with this deployment's own copy first.
+
+    **Which copy is named here and not inside the tool**, because a run that pushed to one fork
+    and asked about another fork's pull request would be reading somebody else's checks. The
+    address-shaped decision lives in the tools rather than spread through the graph, which is the
+    rule every other collaborator here follows.
+    """
+
+    def asking(the_pull_request: AnOpenedPullRequest, repository: Repository) -> WhatTheSuiteSaid:
+        return the_suite_went_green(
+            a_github_client(), the_pull_request, our_copy
+        )
+
+    return asking
 
 
 def _a_pull_request_opener() -> OpenThePullRequest:

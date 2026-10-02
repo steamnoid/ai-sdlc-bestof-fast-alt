@@ -119,6 +119,8 @@ def _the_state_of(
         "requested_stage": work_item.stage,
         "requested_agent": None,
         "requested_role": work_item.role,
+        "the_commit_anything_proved": None,
+        "which_checks_went_green": None,
         "written_files": None,
         "opened_pull_request": None,
         "repair": None,

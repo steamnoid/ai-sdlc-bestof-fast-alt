@@ -100,6 +100,7 @@ from aisdlc.graph.security_node import (
     InspectForSecurityRisk,
     inspect_for_security_risk_in_this_run,
 )
+from aisdlc.graph.suite_node import the_suite_is_asked_about_in_this_run
 from aisdlc.graph.supervise_a_repair import (
     WHERE_THE_SUPERVISOR_DECIDES_WHETHER_TO_REPAIR,
     SuperviseARepair,
@@ -779,5 +780,18 @@ def _the_delivery_stage(graph: StateGraph, delivery: TheDeliveryOfThisRun) -> No
     # red, and an edge here fires alongside that goto, sending the run to the supervisor and down
     # the ordinary delivery path in the same step. It is the same defect that made every repair
     # crash the run, found here by reading for one shape rather than by running into it again.
+    # **The question is asked between the delivery and `DONE`, and it is a node rather than
+    # part of the delivery node** because the delivery already returned: it cannot be
+    # something a node that has already handed control is also going to do. No edge out
+    # of `deliver_this_run` either, for the same reason the supervisor has none.
+    graph.add_node(
+        "ask_github_whether_the_suite_went_green",
+        lambda state: the_suite_is_asked_about_in_this_run(
+            state, delivery.ask_whether_the_suite_went_green
+        ),
+    )
+    graph.add_edge(
+        "ask_github_whether_the_suite_went_green", "mark_the_work_item_delivered"
+    )
     graph.add_edge("mark_the_work_item_delivered", "apply_the_delivery_of_the_run")
     graph.add_edge("apply_the_delivery_of_the_run", THE_RUN_IS_OVER)
