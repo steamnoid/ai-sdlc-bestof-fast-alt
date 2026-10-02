@@ -583,8 +583,7 @@ def _a_delivery_that_only_writes_down(
             )
         ),
         rebase_the_branch_a_run_pushed=(
-            rebase_the_branch_a_run_pushed
-            or _a_rebase_no_test_in_this_file_asked_for()
+            rebase_the_branch_a_run_pushed or _a_rebase_no_test_in_this_file_asked_for()
         ),
     )
 
