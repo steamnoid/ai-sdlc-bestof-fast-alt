@@ -19,7 +19,6 @@ from aisdlc.approval.approval_decision import ApprovalDecision
 from aisdlc.domain.approval import Approval
 from aisdlc.domain.role import Role
 from aisdlc.domain.stage import Stage
-from aisdlc.agents.what_an_agent_judged import WhatAnAgentJudged
 from aisdlc.domain.work_item import WorkItem
 from aisdlc.graph.what_to_repeat import WhatToRepeat
 from aisdlc.tools.github_clone_repository import ClonedRepository
@@ -55,7 +54,6 @@ class AgentState(TypedDict):
     """
 
     work_item: WorkItem
-    the_note_left_behind: AComment | None
     projects_root: Path
     clone: ClonedRepository | None
     requested_stage: Stage

@@ -594,6 +594,7 @@ Stated rather than left to be discovered.
 
   | the default suite, no network and no credential | what it holds this repository to |
   |---|---|
+  | `test_every_type_a_state_channel_holds_is_named_for_the_serializer.py` | that every type a state channel carries is one the checkpoint serializer may rebuild — a guard `lifecycle.py` described and named and never had |
   | `test_the_domain_reaches_nothing_it_may_not.py` | that no rule in `domain/` reaches a store, a model, a filesystem or a graph — and two of its four tests exist to prove the guard can refuse |
   | `test_a_model_that_answers_nothing_is_asked_again.py` | that a model answering nothing is asked again and told what was wrong, which is what every other reasoning node already did |
   | `test_a_run_from_a_request_to_a_delivery.py` | a run from a sentence to a delivery, both repairs walked end to end, and the supervisor's planner route ending a run with a sentence rather than a `StateMachineError` |
