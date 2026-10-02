@@ -34,7 +34,6 @@ from aisdlc.tools.why_the_suite_may_not_be_merged import (
 )
 
 WHERE_GITHUB_KEEPS_THE_PULL_REQUEST = "/repos/{owner}/{name}/pulls/{number}"
-WHERE_GITHUB_KEEPS_THE_CHECKS_ON_A_REF = "/repos/{owner}/{name}/commits/{ref}/check-runs"
 WHERE_GITHUB_KEEPS_THE_CHECKS_ON_A_COMMIT = "/repos/{owner}/{name}/commits/{commit}/check-runs"
 
 GITHUB_OKAY = 200
@@ -91,9 +90,8 @@ def the_suite_went_green(
     says the pull request points at, which is the commit the merge button would merge and the only
     one a merge can be justified by.
     """
-    the_ref = the_pull_request.address.rsplit("/", 1)[-1]
-    the_head_commit = the_ref
-    the_checks = _the_check_runs_on(client, repository, the_ref)
+    the_head_commit = _the_commit_the_pull_request_points_at(client, the_pull_request, repository)
+    the_checks = _the_check_runs_on(client, repository, the_head_commit)
     _refuse_a_check_run_that_is_not_green(the_checks, the_head_commit)
 
     return WhatTheSuiteSaid(
@@ -146,8 +144,8 @@ def _the_check_runs_on(
 ) -> list[object]:
     """Every check GitHub has a run for on this one commit, in the order GitHub lists them."""
     answer = client.get(
-        WHERE_GITHUB_KEEPS_THE_CHECKS_ON_A_REF.format(
-            owner=repository.owner, name=repository.name, ref=the_commit
+        WHERE_GITHUB_KEEPS_THE_CHECKS_ON_A_COMMIT.format(
+            owner=repository.owner, name=repository.name, commit=the_commit
         ),
         params={"per_page": HOW_MANY_CHECK_RUNS_ARE_READ},
         timeout=SECONDS_A_READ_MAY_TAKE,
