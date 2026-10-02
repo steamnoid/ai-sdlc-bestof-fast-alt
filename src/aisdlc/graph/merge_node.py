@@ -24,6 +24,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from langgraph.types import Command
+
 from aisdlc.graph.agent_state import AgentState
 from aisdlc.tools.merge_a_pull_request import (
     APullRequestToMerge,
@@ -42,13 +44,14 @@ checks were read about — which is the thing that makes the merge mean *this co
 
 def merge_the_delivery_in_this_run(
     state: AgentState, merge_the_pull_request: MergeAPullRequest
-) -> dict[str, object]:
+) -> Command:
     """Merge the pull request this run opened, on the commit GitHub says proved it."""
-    what_the_merge_landed = merge_the_pull_request(
-        _the_merge_this_run_is_asking_for(state)
-    )
+    what_the_merge_landed = merge_the_pull_request(_the_merge_this_run_is_asking_for(state))
 
-    return {"the_commit_that_landed": what_the_merge_landed.commit}
+    return Command(
+        goto="mark_the_work_item_delivered",
+        update={"the_commit_that_landed": what_the_merge_landed.commit},
+    )
 
 
 def _the_merge_this_run_is_asking_for(state: AgentState) -> APullRequestToMerge:

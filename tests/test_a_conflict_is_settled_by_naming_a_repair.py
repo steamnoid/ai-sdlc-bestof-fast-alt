@@ -50,13 +50,23 @@ from aisdlc.domain.repository import Repository
 from aisdlc.domain.role import Role
 from aisdlc.domain.work_item import a_work_item_commissioned_for_an_agent
 from aisdlc.graph.agent_state import AgentState
+from aisdlc.graph.merge_node import merge_the_delivery_in_this_run
 from aisdlc.graph.router import THE_RUN_IS_OVER
-from aisdlc.graph.settle_a_conflict_node import settle_a_conflict_in_this_run
+from aisdlc.graph.settle_a_conflict_node import (
+    WHERE_THE_CONFLICT_IS_SETTLED,
+    settle_a_conflict_in_this_run,
+)
 from aisdlc.graph.suite_node import WHERE_THE_SUITE_IS_ASKED_ABOUT
 from aisdlc.tools.github_clone_repository import ClonedRepository
 from aisdlc.tools.github_create_pull_request import AnOpenedPullRequest
+from aisdlc.tools.merge_a_pull_request import (
+    APullRequestToMerge,
+    ThePullRequestIsInConflictError,
+    WhatTheMergeLanded,
+)
 from aisdlc.tools.our_own_runs import a_delivery_branch_named
 from aisdlc.tools.rebase_the_branch_a_run_pushed import WhatTheRebaseLanded
+from aisdlc.tools.the_suite_went_green import TheSuiteHasNotFinishedYetError
 
 WHERE_A_RUN_GOES_BACK_TO = WHERE_THE_SUITE_IS_ASKED_ABOUT
 WHERE_A_RUN_IS_OVER = THE_RUN_IS_OVER
@@ -363,6 +373,120 @@ def test_a_decision_keeps_the_reason_it_was_given() -> None:
     assert the_decision.the_repair is (
         WhatToDoWhenThePullRequestWillNotMerge.LEAVE_IT_OPEN_AND_SAY_WHY
     ), "the answer kept a string where the set had a name, so nothing downstream can be exhaustive"
+
+
+def test_a_merge_refused_as_a_conflict_reaches_the_node_that_can_settle_it() -> None:
+    """The conflict, carrying GitHub's own words, arrives where a repair can be chosen.
+
+    **The words travel rather than a paraphrase of them.** The one thing this repository knows
+    about a conflict is what GitHub said about it, and a node handed "there was a conflict" has
+    been handed a decision already made by the sentence someone else wrote.
+    """
+    the_refusal = ThePullRequestIsInConflictError(
+        "GitHub says pull request 10 conflicts with main and cannot be merged as it stands."
+    )
+
+    def a_merge_that_is_refused_as_a_conflict(the_pull_request: APullRequestToMerge) -> Any:
+        raise the_refusal
+
+    where_it_went = merge_the_delivery_in_this_run(
+        _the_state_a_conflict_reaches_the_run_in(), a_merge_that_is_refused_as_a_conflict
+    )
+
+    assert where_it_went.goto == WHERE_THE_CONFLICT_IS_SETTLED, (
+        f"the merge was refused as a conflict and the run went to {where_it_went.goto!r}. The only "
+        "node that can choose between the two repairs is not that one, so a conflict still ends "
+        "the run with a stack trace instead of with a decision"
+    )
+    assert where_it_went.update, (
+        "the conflict was handed on with nothing carried. The refusal's own sentence is the only "
+        "evidence a model has about what to repair, and dropping it leaves the model guessing"
+    )
+    what_it_carries = "".join(str(each) for each in where_it_went.update.values())
+    assert "conflicts with main" in what_it_carries, (
+        f"the conflict reached the repair carrying {what_it_carries!r} rather than what GitHub "
+        "said, so the decision is being made about a restatement"
+    )
+
+
+def test_a_merge_refused_for_anything_else_is_not_caught() -> None:
+    """One refusal is handed on and the rest keep propagating, and a blanket `except` loses that.
+
+    **The narrow clause is the declaration, and the type checker reads it.** A merge node that
+    caught everything would turn this into the place every delivery trouble goes — a work item
+    nobody commissioned, a graph wired out of order, a check that has not finished — and each of
+    those would arrive here as a conflict to repair.
+    """
+
+    def a_merge_refused_because_the_checks_had_not_finished(the_pull_request: Any) -> Any:
+        raise TheSuiteHasNotFinishedYetError("the_gate is still queued")
+
+    with pytest.raises(TheSuiteHasNotFinishedYetError):
+        merge_the_delivery_in_this_run(
+            _the_state_a_conflict_reaches_the_run_in(),
+            a_merge_refused_because_the_checks_had_not_finished,
+        )
+
+
+def test_a_merge_that_landed_names_where_the_run_goes_on() -> None:
+    """With the edge gone the ordinary path has to name its own destination, or it has none.
+
+    **A node that hands back nothing is a node the graph cannot leave.** Removing the edge out of
+    the merge is what keeps an edge from firing alongside this `goto` and delivering a pull
+    request that was never merged — and the price of removing it is that the destination has to
+    be named here.
+    """
+    where_it_went = merge_the_delivery_in_this_run(
+        _the_state_a_conflict_reaches_the_run_in(),
+        lambda the_pull_request: WhatTheMergeLanded(
+            commit="f" * 40, what_github_said="Pull Request successfully merged"
+        ),
+    )
+
+    assert where_it_went.goto == "mark_the_work_item_delivered", (
+        f"the merge landed and the run went to {where_it_went.goto!r} rather than on to mark the "
+        "work item delivered"
+    )
+    assert where_it_went.update == {"the_commit_that_landed": "f" * 40}, (
+        f"the merge landed and the state carries {where_it_went.update!r}, and the commit that "
+        "landed is the one fact the record of the run is built from"
+    )
+
+
+def test_no_edge_leaves_the_merge_node() -> None:
+    """An edge would fire alongside the `goto`, and the run would deliver a pull request.
+
+    **That is a delivery nobody merged, marked delivered, and the record would say otherwise.**
+
+    **Found here by reading for one shape rather than by running into it again.** The delivery
+    node lost its edge for exactly this reason — `deliver_this_run` returns a `Command(goto=...)`
+    when a suite went red, and an edge fired alongside it, sending the run to the supervisor and
+    down the ordinary path in the same step.
+
+    **Parsed and not imported**, because a double could answer either way: the claim is about the
+    edge the production graph builds, and a test that walks a substituted graph would only prove
+    the substitute was walked.
+    """
+    import ast
+
+    the_lifecycle = Path(__file__).parent.parent / "src" / "aisdlc" / "graph" / "lifecycle.py"
+    what_leaves_the_merge: list[str] = []
+
+    for a_node in ast.walk(ast.parse(the_lifecycle.read_text())):
+        if not isinstance(a_node, ast.Call) or getattr(a_node.func, "attr", "") != "add_edge":
+            continue
+        the_arguments = [ast.unparse(one) for one in a_node.args]
+        if the_arguments and the_arguments[0] in (
+            "WHERE_THE_DELIVERY_IS_MERGED",
+            '"merge_the_delivery_in_this_run"',
+        ):
+            what_leaves_the_merge.append(" -> ".join(the_arguments))
+
+    assert not what_leaves_the_merge, (
+        f"{what_leaves_the_merge} leaves the merge node. That node now names its own destination, "
+        "so an edge fires alongside the goto and the run marks a pull request delivered that was "
+        "never merged. This is the defect the delivery node's own edge was removed for"
+    )
 
 
 def test_the_node_asks_a_question_it_did_not_write() -> None:

@@ -37,6 +37,8 @@ from aisdlc.graph.suite_node import WHERE_THE_SUITE_IS_ASKED_ABOUT
 from aisdlc.llm.asking_a_model_for import ask_a_model_for
 from aisdlc.tools.rebase_the_branch_a_run_pushed import WhatTheRebaseLanded
 
+WHERE_THE_CONFLICT_IS_SETTLED = "settle_the_conflict_in_this_run"
+
 RebaseTheBranchARunPushed = Callable[[Path, str, str, str], WhatTheRebaseLanded]
 """The rebase, and the four facts it is asked with, in the order it is asked with them.
 
