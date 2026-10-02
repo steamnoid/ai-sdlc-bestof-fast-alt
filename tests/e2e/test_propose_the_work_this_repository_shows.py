@@ -92,13 +92,24 @@ LANGUAGES_BY_SUFFIX = {
 # The manifests a repository declares its build system in, in the order one is most likely to
 # hold them. Read off the clone rather than remembered: a build system guessed here would be
 # handed to a model as though it were a finding.
+# **A command and not a tool, and every entry names one, because `DiscoveryReport` refuses a
+# `build_system` that names one thing and nothing else.** Four of these six used to be bare nouns
+# — `npm`, `Cargo`, `Maven`, `Gradle` — and every one of them raised `ValueError` once the rule
+# arrived from a real run. The rule asks what the build *runs on*: the command, and the runtime or
+# image and version it pins where the repository declares one.
+#
+# **This is the second file the same rule broke, and the first time I fixed only the occurrence I
+# had in front of me.** `tests/e2e/test_review_an_artifact.py` was 12 errors; this table was 16
+# more, in the same run, for the same reason. A rule that lands in production code and is not
+# looked for in the fixtures will find every fixture, and one fix at a time is how you find out
+# how many there were.
 MANIFESTS_NAMING_A_BUILD_SYSTEM = (
-    ("package.json", "npm"),
-    ("pyproject.toml", "a Python project"),
-    ("Cargo.toml", "Cargo"),
-    ("go.mod", "the Go toolchain"),
-    ("pom.xml", "Maven"),
-    ("build.gradle", "Gradle"),
+    ("package.json", "npm ci && npm run build"),
+    ("pyproject.toml", "python -m build"),
+    ("Cargo.toml", "cargo build --release"),
+    ("go.mod", "go build ./..."),
+    ("pom.xml", "mvn package"),
+    ("build.gradle", "gradle build"),
 )
 
 # The documents a repository holds about itself, in the order a reader would look for them.
