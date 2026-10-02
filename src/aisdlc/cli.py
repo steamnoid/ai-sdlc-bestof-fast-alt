@@ -150,6 +150,14 @@ def resume(
     it survives the process. `a_resumed_run_of` reads both and rebuilds the state, and this command
     is the door — without it the reconstruction is correct code nobody can reach.
 
+    **And today the door opens onto a room nothing has ever filled, which is said here rather than
+    left to be found.** The per-run `WorkItem.json` this reads is written by
+    `persistence.the_register_of_work_items`, and *no production path calls that one* — a run
+    registers itself in SQLite and nothing writes the file this command needs, so this refuses
+    every work item it is given. **The door is correct and the room is empty**, and the two halves
+    are separate pieces of work: this command, and the composition root writing the register a run
+    leaves behind. Until the second lands, treat this as the refusal it is today.
+
     **The refusal is a sentence, for the reason `run` already says it out loud.** A terminal
     reader is a person and a traceback is a thing a person hands to a developer rather than reads.
     A person who has just lost a terminal is looking for their work, not for a stack.
