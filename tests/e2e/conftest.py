@@ -55,6 +55,7 @@ from aisdlc.llm.llm_configuration import a_configuration_from_the_environment
 from aisdlc.llm.model_factory import a_model_for
 from aisdlc.llm.model_provider import LlmProvider
 from aisdlc.observability.saying_what_a_run_is_doing import THE_SETTING_THAT_ASKS_TO_WATCH
+from aisdlc.store.where_the_register_lives import the_register_lives_at
 from aisdlc.tools.github_client import Addresses, the_clone_url_of
 from aisdlc.tools.github_clone_repository import (
     ClonedRepository,
@@ -108,6 +109,29 @@ def the_deployments_own_settings() -> Iterator[None]:
         os.environ[a_name] = a_value
     for a_name in [a_name for a_name in os.environ if a_name not in what_was_already_set]:
         os.environ.pop(a_name, None)
+
+
+@pytest.fixture(autouse=True)
+def the_register_this_test_works_in(tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]:
+    """Open the register at this test's own directory, for every test, and nobody else opens it.
+
+    **The connection is process-wide, so the only shapes available are per tier and per test —
+    and *each file opens its own* is not one of them**, because a second call closes the first.
+    Twelve of the fourteen files in this tier depended on whichever of the other two ran first, and
+    inherited a path under a temporary directory that belonged to a module which had since ended.
+    **That is how a file passes alone and fails in a suite.**
+
+    **Per test rather than per tier**, because a register shared by the whole tier means a work item
+    one file commissioned is visible to every file after it, and a test counting what a register
+    holds would be counting another file's. Opening one is a `sqlite3.connect` and the previous
+    connection closes by this one, so **the isolation is free and the sharing would be a choice.**
+
+    **Autouse, because the whole point is that no file has to remember.** A helper twelve files
+    import is twelve places to forget, and the twelfth is found by a file that fails only when it
+    runs after one of the other eleven.
+    """
+    the_register_lives_at(tmp_path_factory.mktemp("register") / "aisdlc.sqlite3")
+    yield
 
 
 @pytest.fixture(scope="session", autouse=True)
