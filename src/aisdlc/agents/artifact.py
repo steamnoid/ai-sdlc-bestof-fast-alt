@@ -3,9 +3,9 @@
 **One concept, one name, and this is where it lives.** Eight node modules each declared the name
 of the thing they produce, and the router imported all eight to spell the same eight strings a
 ninth time — so an artifact had nine names in nine files and no single place a reader could look
-for what the pipeline can produce. **`THE_ARTIFACT_A_RUN_BEGINS_WITH` was declared twice**, and the
-one thing both declarations were for is what a *resumed* run presents, which is precisely the value
-a person is most likely to rename and least likely to check twice.
+for what the pipeline can produce. **The artifact a run begins with alone was written in four
+files**, and what every one of the four was for is what a run presents first — which is exactly
+the value a person is most likely to rename and least likely to check twice.
 
 **The set is closed, and that is the property rather than a tidiness.** The state is a `TypedDict`,
 so it is not validated when a node writes it — nothing at runtime would refuse
@@ -38,6 +38,27 @@ class Artifact(StrEnum):
     SECURITY_REPORT = "SecurityReport"
     IMPLEMENTATION_PLAN = "ImplementationPlan"
     VERIFICATION_REPORT = "VerificationReport"
+
+    @classmethod
+    def _missing_(cls, value: object) -> Artifact:
+        """Refuse a name this pipeline does not produce, and hand back the eight that it does.
+
+        **The message lists the set, and that is the whole of what this adds.** Python's own
+        message is *"'DiscoveryRepotr' is not a valid Artifact"*, which says what is wrong and
+        nothing about what to write instead — so a writer who misspelled a name has to go and
+        find the set before trying again. **Every other refusal in this package names what is
+        possible**, because that is what turns a wrong guess into a right one inside the same
+        sentence.
+
+        **Raised from here rather than returned as `None`**, which is how Python spells the
+        default refusal: returning `None` produces the message this overrides, and raising is the
+        only way to change it.
+        """
+        what_there_is = ", ".join(sorted(an_artifact.value for an_artifact in cls))
+        raise ValueError(
+            f"{value!r} is not an artifact this pipeline presents. These are the eight, and they "
+            f"are the only ones: {what_there_is}"
+        )
 
     PULL_REQUEST_REQUEST = "PullRequestRequest"
     """What the delivery produces, and the eighth gate.

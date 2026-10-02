@@ -20,6 +20,7 @@ from datetime import UTC, datetime
 
 from aisdlc.agents.architecture_report import ArchitectureReport
 from aisdlc.agents.architecture_report_answer import ArchitectureReportAnswer
+from aisdlc.agents.artifact import Artifact
 from aisdlc.domain.repository import Repository
 from aisdlc.graph.agent_state import AgentState
 from aisdlc.graph.clone_node import TheRepositoryHasNotBeenClonedYetError
@@ -32,7 +33,6 @@ AnalyzeTheArchitecture = Callable[
     tuple[ArchitectureReport, ArchitectureReportAnswer],
 ]
 
-THE_ARTIFACT_THE_ARCHITECTURE_ANALYST_PRODUCES = "ArchitectureReport"
 ITS_FIRST_VERSION = 1
 
 
@@ -54,7 +54,7 @@ def analyze_the_architecture_in_this_run(
 
     if clone is None:
         raise TheRepositoryHasNotBeenClonedYetError(
-            f"{THE_ARTIFACT_THE_ARCHITECTURE_ANALYST_PRODUCES} is reasoned about from the "
+            f"{Artifact.ARCHITECTURE_REPORT} is reasoned about from the "
             "clone, and this run has none yet. The clone node is wired before the analyst "
             "node."
         )
@@ -71,6 +71,6 @@ def analyze_the_architecture_in_this_run(
 
     return {
         "architecture_report": report,
-        "presented_artifact_id": THE_ARTIFACT_THE_ARCHITECTURE_ANALYST_PRODUCES,
+        "presented_artifact_id": Artifact.ARCHITECTURE_REPORT,
         "presented_artifact_version": ITS_FIRST_VERSION,
     }

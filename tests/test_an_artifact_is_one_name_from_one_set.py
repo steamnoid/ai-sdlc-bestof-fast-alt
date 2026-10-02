@@ -34,8 +34,8 @@ import ast
 from pathlib import Path
 
 import pytest
-from aisdlc.agents.artifact import Artifact
 
+from aisdlc.agents.artifact import Artifact
 from aisdlc.graph.router import WHERE_AN_APPROVED_ARTIFACT_LEADS
 
 WHERE_THE_PACKAGE_IS = Path(__file__).parent.parent / "src" / "aisdlc"
@@ -54,22 +54,32 @@ def _the_artifact_names_a_module_assigns(a_module: Path) -> list[str]:
     module whose prose says *the gate presents `DiscoveryReport`* is not a second place the name
     lives — it is a place a reader looks. Reading every string in every file would report every
     explanation of the domain as a duplicate of it.
+
+    **Class bodies are read as well as the module's own statements**, because that is where an
+    enumeration's members are. A walker that stopped at the module level would see `artifact.py` as
+    spelling nothing, and the rule would be satisfied by the one file that is supposed to hold them.
     """
     the_tree = ast.parse(a_module.read_text())
+    the_module_s_own_statements = [the_tree.body]
+    every_class_body = [
+        a_class.body for a_class in the_tree.body if isinstance(a_class, ast.ClassDef)
+    ]
     what_is_assigned: list[str] = []
 
-    for a_definition in the_tree.body:
-        if not isinstance(a_definition, ast.Assign):
-            continue
-        for an_assigned_value in (
-            a_definition.value.elts
-            if isinstance(a_definition.value, ast.Tuple)
-            else [a_definition.value]
-        ):
-            if isinstance(an_assigned_value, ast.Constant) and isinstance(
-                an_assigned_value.value, str
-            ):
-                what_is_assigned.append(an_assigned_value.value)
+    for a_body in the_module_s_own_statements + every_class_body:
+        for a_definition in a_body:
+            if not isinstance(a_definition, ast.Assign):
+                continue
+            the_values = (
+                a_definition.value.elts
+                if isinstance(a_definition.value, ast.Tuple)
+                else [a_definition.value]
+            )
+            for an_assigned_value in the_values:
+                if isinstance(an_assigned_value, ast.Constant) and isinstance(
+                    an_assigned_value.value, str
+                ):
+                    what_is_assigned.append(an_assigned_value.value)
 
     return what_is_assigned
 
@@ -114,15 +124,28 @@ def test_one_artifact_is_named_in_one_module_and_nowhere_else() -> None:
 
     assert not said_in_more_than_one_place, (
         f"{said_in_more_than_one_place} — one artifact named in more than one module. The router "
-        "imports every one of them to spell the same string, so a name changed in one of these is "
+        "imported every one of them to spell the same string, so a name changed in one of these is "
         "a name the router will not recognise, and the run stops at a gate with a message about an "
         "artifact nobody presented"
     )
 
-    assert set(where_each_name_lives) == WHAT_THIS_PIPELINE_PRESENTS, (
-        f"the set is {sorted(WHAT_THIS_PIPELINE_PRESENTS)} and {sorted(where_each_name_lives)} is "
-        "what the modules spell out, so an artifact exists that no module says the name of — and a "
-        "name nothing spells is a name a gate cannot present"
+    said_nowhere_at_all = sorted(WHAT_THIS_PIPELINE_PRESENTS - set(where_each_name_lives))
+
+    assert not said_nowhere_at_all, (
+        f"{said_nowhere_at_all} is in the set and spelled out in no module at all, so it is a name "
+        "no gate can present and a run that produced one would stop at the gate with nothing to "
+        "show. This is the direction the duplicates test cannot see, and it is the one a name "
+        "typed only as an enum member somewhere would slip through"
+    )
+
+    said_somewhere_else = {
+        a_name: where for a_name, where in where_each_name_lives.items() if where != ["artifact.py"]
+    }
+
+    assert not said_somewhere_else, (
+        f"{said_somewhere_else} — spelled out outside the module that owns the set. There is "
+        "exactly one place a reader should look for what this pipeline presents, and a second "
+        "spelling is a copy that can be changed without the first"
     )
 
 

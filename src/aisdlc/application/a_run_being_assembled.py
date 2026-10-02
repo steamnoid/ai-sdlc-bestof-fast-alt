@@ -31,6 +31,7 @@ from aisdlc.agents.analyze_the_architecture import (
 from aisdlc.agents.analyze_the_repository import the_product_analyst_using_the_configured_model
 from aisdlc.agents.analyze_the_requirements import the_qa_analyst_using_the_configured_model
 from aisdlc.agents.apply_the_plan import apply_and_verify
+from aisdlc.agents.artifact import Artifact
 from aisdlc.agents.discover_the_repository import (
     the_discovery_using_the_configured_model,
 )
@@ -54,7 +55,6 @@ from aisdlc.verify_the_change import the_suite_in_a_container
 # `KeyError` from inside a node, and the message names a `None` rather than the wiring. Every
 # channel is enumerated here, once, for the same reason the engine enumerated them in its test
 # support: the next channel added has one place to go rather than eleven.
-THE_ARTIFACT_A_RUN_BEGINS_WITH = "DiscoveryReport"
 ITS_FIRST_VERSION = 1
 
 
@@ -224,7 +224,7 @@ def a_run_beginning_at(
         "verification_report": None,
         "pull_request_request": None,
         "opened_pull_request": None,
-        "presented_artifact_id": THE_ARTIFACT_A_RUN_BEGINS_WITH,
+        "presented_artifact_id": Artifact.DISCOVERY_REPORT,
         "presented_artifact_version": ITS_FIRST_VERSION,
         "repair": None,
         "what_stopped_this_run": None,

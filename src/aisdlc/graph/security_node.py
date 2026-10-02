@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from aisdlc.agents.artifact import Artifact
 from aisdlc.agents.security_report import SecurityReport
 from aisdlc.domain.repository import Repository
 from aisdlc.graph.agent_state import AgentState
@@ -28,7 +29,6 @@ from aisdlc.tools.github_clone_repository import ClonedRepository
 
 InspectForSecurityRisk = Callable[[ClonedRepository, Repository], SecurityReport]
 
-THE_ARTIFACT_THE_SECURITY_ANALYST_PRODUCES = "SecurityReport"
 ITS_FIRST_VERSION = 1
 
 
@@ -51,12 +51,12 @@ def inspect_for_security_risk_in_this_run(
 
     if clone is None:
         raise TheRepositoryHasNotBeenClonedYetError(
-            f"{THE_ARTIFACT_THE_SECURITY_ANALYST_PRODUCES} is inspected for in the clone, "
+            f"{Artifact.SECURITY_REPORT} is inspected for in the clone, "
             "and this run has none yet. The clone node is wired before the analyst node."
         )
 
     return {
         "security_report": inspect(clone, state["work_item"].repository),
-        "presented_artifact_id": THE_ARTIFACT_THE_SECURITY_ANALYST_PRODUCES,
+        "presented_artifact_id": Artifact.SECURITY_REPORT,
         "presented_artifact_version": ITS_FIRST_VERSION,
     }
