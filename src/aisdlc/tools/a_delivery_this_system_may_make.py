@@ -41,6 +41,7 @@ from aisdlc.tools.merge_a_pull_request import (
     WhatTheMergeLanded,
     merge_a_pull_request,
 )
+from aisdlc.tools.rebase_the_branch_a_run_pushed import rebase_the_branch_a_run_pushed
 from aisdlc.tools.the_suite_went_green import WhatTheSuiteSaid, the_suite_went_green
 
 
@@ -61,6 +62,7 @@ def the_delivery_this_system_may_make(repository: Repository) -> TheDeliveryOfTh
             our_copy
         ),
         merge_the_pull_request=_someone_who_merges_the_pull_request(),
+        rebase_the_branch_a_run_pushed=rebase_the_branch_a_run_pushed,
     )
 
 

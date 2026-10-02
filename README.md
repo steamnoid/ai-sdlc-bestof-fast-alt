@@ -594,6 +594,7 @@ Stated rather than left to be discovered.
 
   | the default suite, no network and no credential | what it holds this repository to |
   |---|---|
+  | `test_a_conflict_is_settled_by_naming_a_repair.py` | that a conflicting delivery is settled by naming one of two repairs that a run can actually take, that a decision with no grounds is refused, and that the node holds no prompt of its own |
   | `test_a_rebase_lands_this_runs_commit.py` | that a rebase lands this run's commit on the branch it joins, moves nothing else, and leaves the clone usable when git cannot finish |
   | `test_a_merge_lands_one_commit_and_says_so.py` | that a merge lands the one commit anything proved, that `mergeable` is read before anything is pushed at the pull request, and that `null` is neither yes nor no |
   | `test_the_suite_went_green_on_the_commit_being_merged.py` | that a merge is justified by the checks on the sha the pull request reports, and that four different refusals stay four different facts |
@@ -636,6 +637,7 @@ Stated rather than left to be discovered.
   | `test_plan_the_change.py` | that a real plan names only paths the clone holds or is allowed to create, in a directory the suite collects |
   | `test_implement_the_plan.py` | that a real model's change lands on the disk holding exactly what it proposed, and that nothing outside the plan was written |
   | `test_apply_the_plan.py` | that the change is committed under the agent's name, the suite is asked on both sides, and a change nothing observed is refused |
+  | `test_settle_a_conflict_in_this_run.py` | that a real model names one of the two repairs and says why, that its grounds are about this pull request rather than about conflicts in general, and that both destinations are nodes the compiled graph holds |
   | `test_supervise_a_repair.py` | that a real model's verdict names a node the compiled graph actually has, and that the run did not die of the wiring |
   | `test_review_an_artifact.py` | that a real model's decision is signed `autopilot:<policy>` and never as a person, at the version that was presented |
   | `test_brief_this_repository.py` | that every opportunity cites a file the clone holds, and that the run's own judgement is not the type's default |

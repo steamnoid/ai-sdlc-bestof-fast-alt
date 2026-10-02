@@ -25,6 +25,7 @@ from pydantic import BaseModel
 from aisdlc.domain.repository import Repository
 from aisdlc.graph.deliver_node import OpenThePullRequest, PushTheBranch
 from aisdlc.graph.merge_node import MergeAPullRequest
+from aisdlc.graph.settle_a_conflict_node import RebaseTheBranchARunPushed
 from aisdlc.graph.suite_node import AskWhetherTheSuiteWentGreen
 
 
@@ -36,6 +37,15 @@ class TheDeliveryOfThisRun(BaseModel):
     GitHub; `ask_whether_the_suite_went_green` reads back what GitHub says about it. A run that
     can do the first two and not the third reports a delivery on the strength of its own
     intention, which is the one claim a delivery must not make about somebody else's repository.
+
+    **And the fourth is the repair, which is here because it lands on the same remote.** A
+    merge GitHub refuses as a conflict is answered by replaying the branch, and both act on
+    `our_copy` — so a delivery that can merge but not rebase is a run that meets a conflict and
+    has nothing to do about it.
+
+    **No default, and the reason is the one the supervisor's seam already carries.** A default
+    that refuses is right for a graph test that never reaches the repair and wrong for the one
+    assembly that matters, and a default is silent until the run that needed it.
     """
 
     our_copy: Repository
@@ -43,3 +53,4 @@ class TheDeliveryOfThisRun(BaseModel):
     open_the_pull_request: OpenThePullRequest
     ask_whether_the_suite_went_green: AskWhetherTheSuiteWentGreen
     merge_the_pull_request: MergeAPullRequest
+    rebase_the_branch_a_run_pushed: RebaseTheBranchARunPushed

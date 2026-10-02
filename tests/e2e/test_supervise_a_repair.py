@@ -270,6 +270,9 @@ def the_nodes_this_graph_registers() -> frozenset[str]:
         """A collaborator that refuses, so a test cannot reach one by accident."""
         raise AssertionError("this file builds the graph to read its nodes and runs nothing in it")
 
+    from aisdlc.domain.repository import Repository
+    from aisdlc.graph.the_delivery_of_this_run import TheDeliveryOfThisRun
+
     the_graph = the_lifecycle(
         agents=TheAgentsThisRun(
             discover=a_collaborator_nobody_asked_for,
@@ -280,7 +283,14 @@ def the_nodes_this_graph_registers() -> frozenset[str]:
             plan=a_collaborator_nobody_asked_for,
             apply_and_verify=a_collaborator_nobody_asked_for,
         ),
-        delivery=a_collaborator_nobody_asked_for,
+        delivery=TheDeliveryOfThisRun(
+            our_copy=Repository(owner="nobody", name="asked-for-nothing"),
+            push_the_branch=a_collaborator_nobody_asked_for,
+            open_the_pull_request=a_collaborator_nobody_asked_for,
+            ask_whether_the_suite_went_green=a_collaborator_nobody_asked_for,
+            merge_the_pull_request=a_collaborator_nobody_asked_for,
+            rebase_the_branch_a_run_pushed=a_collaborator_nobody_asked_for,
+        ),
     )
 
     return frozenset(the_graph.get_graph().nodes)

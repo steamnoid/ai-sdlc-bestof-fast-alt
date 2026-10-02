@@ -57,7 +57,11 @@ from aisdlc.graph.discover_node import (
     Discover,
     discover_the_repository_in_this_run,
 )
-from aisdlc.graph.merge_node import WHERE_THE_DELIVERY_IS_MERGED, merge_the_delivery_in_this_run
+from aisdlc.graph.merge_node import (
+    WHERE_THE_CONFLICT_IS_SETTLED,
+    WHERE_THE_DELIVERY_IS_MERGED,
+    merge_the_delivery_in_this_run,
+)
 from aisdlc.graph.pickup_node import (
     begin_delivering_the_work_item,
     begin_describing_the_architecture,
@@ -100,6 +104,10 @@ from aisdlc.graph.router import (
 from aisdlc.graph.security_node import (
     InspectForSecurityRisk,
     inspect_for_security_risk_in_this_run,
+)
+from aisdlc.graph.settle_a_conflict_node import (
+    RebaseTheBranchARunPushed,
+    the_repair_chosen_using_the_configured_model,
 )
 from aisdlc.graph.suite_node import the_suite_is_asked_about_in_this_run
 from aisdlc.graph.supervise_a_repair import (
@@ -213,6 +221,7 @@ def the_lifecycle(
     _the_planning_stage(graph, agents.plan)
     _the_implementation_stage(graph, agents.apply_and_verify)
     _the_delivery_stage(graph, delivery)
+    _the_conflict_repair(graph, delivery.rebase_the_branch_a_run_pushed)
     _the_repair_stage(graph, agents.supervise)
 
     graph.add_edge(START, "offer_the_work_item_to_discover")
@@ -347,13 +356,9 @@ def _the_product_analysis_stage(graph: StateGraph, propose: Analyze) -> None:
     )
     graph.add_node("begin_the_product_analysis", begin_the_product_analysis)
     graph.add_node("hand_the_requirements_to_a_human", hand_the_requirements_to_a_human)
-    graph.add_node(
-        "apply_the_pickup_by_the_product_analyst", transition_the_work_item
-    )
+    graph.add_node("apply_the_pickup_by_the_product_analyst", transition_the_work_item)
     graph.add_node("apply_the_product_analysis_begun", transition_the_work_item)
-    graph.add_node(
-        "apply_the_handover_of_the_requirements", transition_the_work_item
-    )
+    graph.add_node("apply_the_handover_of_the_requirements", transition_the_work_item)
     graph.add_node(
         "write_what_the_product_analyst_found",
         record_what_this_run_has,
@@ -371,9 +376,7 @@ def _the_product_analysis_stage(graph: StateGraph, propose: Analyze) -> None:
     graph.add_edge("apply_the_product_analysis_begun", "propose_requirements_for_this_run")
     graph.add_edge("propose_requirements_for_this_run", "write_what_the_product_analyst_found")
     graph.add_edge("write_what_the_product_analyst_found", "hand_the_requirements_to_a_human")
-    graph.add_edge(
-        "hand_the_requirements_to_a_human", "apply_the_handover_of_the_requirements"
-    )
+    graph.add_edge("hand_the_requirements_to_a_human", "apply_the_handover_of_the_requirements")
     graph.add_conditional_edges(
         "apply_the_handover_of_the_requirements", where_the_gate_leads, THE_GATE_IS_ANSWERED_BY
     )
@@ -387,9 +390,7 @@ def _the_qa_analysis_stage(graph: StateGraph, plan_the_tests: AnalyzeTheRequirem
     place in the graph where a node's input is a thing a person ruled on rather than a thing
     the system fetched.
     """
-    graph.add_node(
-        "offer_the_work_item_to_the_qa_analyst", offer_the_work_item_to_the_qa_analyst
-    )
+    graph.add_node("offer_the_work_item_to_the_qa_analyst", offer_the_work_item_to_the_qa_analyst)
     graph.add_node("begin_planning_the_tests", begin_planning_the_tests)
     graph.add_node("hand_the_qa_plan_to_a_human", hand_the_qa_plan_to_a_human)
     graph.add_node("apply_the_pickup_by_the_qa_analyst", transition_the_work_item)
@@ -403,9 +404,7 @@ def _the_qa_analysis_stage(graph: StateGraph, plan_the_tests: AnalyzeTheRequirem
         "plan_the_tests_for_this_run",
         lambda state: analyze_the_requirements_in_this_run(state, plan_the_tests),
     )
-    graph.add_edge(
-        "offer_the_work_item_to_the_qa_analyst", "apply_the_pickup_by_the_qa_analyst"
-    )
+    graph.add_edge("offer_the_work_item_to_the_qa_analyst", "apply_the_pickup_by_the_qa_analyst")
     graph.add_edge("apply_the_pickup_by_the_qa_analyst", "begin_planning_the_tests")
     graph.add_edge("begin_planning_the_tests", "apply_the_test_planning_begun")
     graph.add_edge("apply_the_test_planning_begun", "plan_the_tests_for_this_run")
@@ -417,9 +416,7 @@ def _the_qa_analysis_stage(graph: StateGraph, plan_the_tests: AnalyzeTheRequirem
     )
 
 
-def _the_architecture_analysis_stage(
-    graph: StateGraph, describe: AnalyzeTheArchitecture
-) -> None:
+def _the_architecture_analysis_stage(graph: StateGraph, describe: AnalyzeTheArchitecture) -> None:
     """Ask the architecture analyst what the code is shaped like, and hand it to a person.
 
     The third analysis gate, and the first one whose artifact describes the repository rather
@@ -453,9 +450,7 @@ def _the_architecture_analysis_stage(
         "apply_the_pickup_by_the_architecture_analyst", "begin_describing_the_architecture"
     )
     graph.add_edge("begin_describing_the_architecture", "apply_the_description_begun")
-    graph.add_edge(
-        "apply_the_description_begun", "describe_the_architecture_for_this_run"
-    )
+    graph.add_edge("apply_the_description_begun", "describe_the_architecture_for_this_run")
     graph.add_edge(
         "describe_the_architecture_for_this_run", "write_what_the_architecture_analyst_described"
     )
@@ -470,9 +465,7 @@ def _the_architecture_analysis_stage(
     )
 
 
-def _the_security_analysis_stage(
-    graph: StateGraph, inspect: InspectForSecurityRisk
-) -> None:
+def _the_security_analysis_stage(graph: StateGraph, inspect: InspectForSecurityRisk) -> None:
     """Ask the security analyst what is wrong, and hand the findings to a person.
 
     The last gate before anything is written, so it is the one where an approval is least
@@ -485,9 +478,7 @@ def _the_security_analysis_stage(
         offer_the_work_item_to_the_security_analyst,
     )
     graph.add_node("begin_inspecting_for_security_risk", begin_inspecting_for_security_risk)
-    graph.add_node(
-        "hand_the_security_report_to_a_human", hand_the_security_report_to_a_human
-    )
+    graph.add_node("hand_the_security_report_to_a_human", hand_the_security_report_to_a_human)
     graph.add_node("apply_the_pickup_by_the_security_analyst", transition_the_work_item)
     graph.add_node("apply_the_inspection_begun", transition_the_work_item)
     graph.add_node("apply_the_handover_of_the_security_report", transition_the_work_item)
@@ -503,19 +494,11 @@ def _the_security_analysis_stage(
         "offer_the_work_item_to_the_security_analyst",
         "apply_the_pickup_by_the_security_analyst",
     )
-    graph.add_edge(
-        "apply_the_pickup_by_the_security_analyst", "begin_inspecting_for_security_risk"
-    )
+    graph.add_edge("apply_the_pickup_by_the_security_analyst", "begin_inspecting_for_security_risk")
     graph.add_edge("begin_inspecting_for_security_risk", "apply_the_inspection_begun")
-    graph.add_edge(
-        "apply_the_inspection_begun", "inspect_for_security_risk_in_this_run"
-    )
-    graph.add_edge(
-        "inspect_for_security_risk_in_this_run", "write_what_the_security_analyst_found"
-    )
-    graph.add_edge(
-        "write_what_the_security_analyst_found", "hand_the_security_report_to_a_human"
-    )
+    graph.add_edge("apply_the_inspection_begun", "inspect_for_security_risk_in_this_run")
+    graph.add_edge("inspect_for_security_risk_in_this_run", "write_what_the_security_analyst_found")
+    graph.add_edge("write_what_the_security_analyst_found", "hand_the_security_report_to_a_human")
     graph.add_edge(
         "hand_the_security_report_to_a_human", "apply_the_handover_of_the_security_report"
     )
@@ -531,9 +514,7 @@ def _the_planning_stage(graph: StateGraph, plan: PlanTheChange) -> None:
     that is the router's whole job, and it is the difference between a pipeline and a run that
     does whatever it feels like next.
     """
-    graph.add_node(
-        "plan_the_change", lambda state: plan_the_change_in_this_run(state, plan)
-    )
+    graph.add_node("plan_the_change", lambda state: plan_the_change_in_this_run(state, plan))
     graph.add_node("write_what_the_plan_says", record_what_this_run_has)
     graph.add_node("offer_the_work_item_to_the_planner", offer_the_work_item_to_the_planner)
     graph.add_node("begin_planning_the_change", begin_planning_the_change)
@@ -550,9 +531,7 @@ def _the_planning_stage(graph: StateGraph, plan: PlanTheChange) -> None:
     )
 
 
-def _the_implementation_stage(
-    graph: StateGraph, apply_and_verify: ApplyAndVerify
-) -> None:
+def _the_implementation_stage(graph: StateGraph, apply_and_verify: ApplyAndVerify) -> None:
     """Take the approved plan, make the change, verify it, and hand the verification over.
 
     The last stage that is built. What follows the gate is the `aisdlc-pr` agent, which is not:
@@ -564,9 +543,7 @@ def _the_implementation_stage(
         lambda state: apply_and_verify_in_this_run(state, apply_and_verify),
     )
     graph.add_node("write_what_the_change_says", record_what_this_run_has)
-    graph.add_node(
-        "offer_the_work_item_to_the_implementer", offer_the_work_item_to_the_implementer
-    )
+    graph.add_node("offer_the_work_item_to_the_implementer", offer_the_work_item_to_the_implementer)
     graph.add_node("begin_implementing_the_plan", begin_implementing_the_plan)
     graph.add_node("hand_the_verification_to_a_human", hand_the_verification_to_a_human)
     graph.add_edge(THE_NEXT_ARTIFACT_IS_THE_CHANGE, "apply_the_pickup_by_the_implementer")
@@ -580,9 +557,7 @@ def _the_implementation_stage(
     # and LangGraph refused the run with "Can receive only one value per step" at
     # `requested_stage`. The same rule the supervisor already follows, for the same reason.
     graph.add_edge("write_what_the_change_says", "hand_the_verification_to_a_human")
-    graph.add_edge(
-        "hand_the_verification_to_a_human", "apply_the_handover_of_the_verification"
-    )
+    graph.add_edge("hand_the_verification_to_a_human", "apply_the_handover_of_the_verification")
     graph.add_conditional_edges(
         "apply_the_handover_of_the_verification", where_the_gate_leads, THE_GATE_IS_ANSWERED_BY
     )
@@ -703,6 +678,27 @@ def a_checkpoint_serializer() -> JsonPlusSerializer:
     return JsonPlusSerializer(allowed_msgpack_modules=TYPES_A_CHECKPOINT_MAY_HOLD)
 
 
+def _the_conflict_repair(
+    graph: StateGraph, rebase_the_branch: RebaseTheBranchARunPushed
+) -> None:
+    """The one node a pull request GitHub will not merge is handed to, and nothing leaves it.
+
+    **Registered beside the merge rather than inside a stage, because the merge owns it.** The
+    refusal is raised by the merge and nowhere else, so a node wired into any other stage would be
+    unreachable from the one place the conflict can happen.
+
+    **No edge out of it either, because it hands control itself.** It names a repair and returns
+    `Command(goto=...)`; an edge from here would be a second, competing answer to the same
+    question, and the router's own rule is that a route has one destination.
+    """
+    settle = the_repair_chosen_using_the_configured_model(rebase_the_branch)
+
+    graph.add_node(
+        WHERE_THE_CONFLICT_IS_SETTLED,
+        lambda state: settle(state, state["the_conflict_that_stopped_this_merge"]),
+    )
+
+
 def _the_repair_stage(graph: StateGraph, supervise: SuperviseARepair) -> None:
     """The one node a refusal is handed to, registered here because it is reachable from any stage.
 
@@ -759,9 +755,7 @@ def _the_delivery_stage(graph: StateGraph, delivery: TheDeliveryOfThisRun) -> No
         "offer_the_work_item_to_the_pull_request_agent",
         "apply_the_pickup_by_the_pull_request_agent",
     )
-    graph.add_edge(
-        "apply_the_pickup_by_the_pull_request_agent", "begin_delivering_the_work_item"
-    )
+    graph.add_edge("apply_the_pickup_by_the_pull_request_agent", "begin_delivering_the_work_item")
     graph.add_edge("begin_delivering_the_work_item", "apply_the_delivery_begun")
     graph.add_edge("apply_the_delivery_begun", "describe_the_delivery_for_this_run")
     graph.add_edge("describe_the_delivery_for_this_run", "write_what_this_run_would_deliver")
@@ -795,9 +789,12 @@ def _the_delivery_stage(graph: StateGraph, delivery: TheDeliveryOfThisRun) -> No
         WHERE_THE_DELIVERY_IS_MERGED,
         lambda state: merge_the_delivery_in_this_run(state, delivery.merge_the_pull_request),
     )
-    graph.add_edge(
-        "ask_github_whether_the_suite_went_green", WHERE_THE_DELIVERY_IS_MERGED
-    )
-    graph.add_edge(WHERE_THE_DELIVERY_IS_MERGED, "mark_the_work_item_delivered")
+    graph.add_edge("ask_github_whether_the_suite_went_green", WHERE_THE_DELIVERY_IS_MERGED)
+    # **No edge out of the merge node, and that is why the node names its own destination.**
+    # The node returns a `Command(goto=...)` — to the repair when GitHub says the pull request
+    # conflicts, on to `mark_the_work_item_delivered` when it merged — so an edge here would fire
+    # alongside whichever `goto` came back and mark a delivery that was never merged. Same
+    # reason `deliver_this_run` has no edge out of it, found by reading for one shape here
+    # rather than by running into it again.
     graph.add_edge("mark_the_work_item_delivered", "apply_the_delivery_of_the_run")
     graph.add_edge("apply_the_delivery_of_the_run", THE_RUN_IS_OVER)
