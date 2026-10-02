@@ -1026,3 +1026,39 @@ list is empty, and would observe nothing while reporting success.
 have found it: 106 tests, no network, no model, all green. The defect is in a test that needs a
 real model, a real clone and a real `git checkout` of a real commit before the assertion is even
 reached — which is exactly the condition §0.4 says a mocked test cannot satisfy.
+
+---
+
+## Two corrections, and the pattern between them
+
+I labelled two things a missing rule after reading them quickly. Both were wrong, and in both
+cases the code that answered was already in the repository and already tested.
+
+**The first was `Requirements` that contradicts itself.** A deterministic refusal would have
+reinstated the refusal this repository deleted on the evidence of six real runs.
+
+**The second was one sentence in the planner's prompt:**
+
+> `Plan only. Do not write, edit or suggest the contents of any file.`
+
+I wrote it up as prompt begging, because §0.4 says a rule that lives only in prose is not
+verification. **It is verified twice, and neither time is in the prompt.**
+
+- `_every_file_to_change_is_in_the_clone` raises `PlannedFileNotFoundError` for any path that is
+  not a file of this clone, and `tests/test_a_plan_that_adds_a_file_is_a_plan.py` demands that
+  refusal. A model that put a paragraph in `files_to_change` cannot produce a plan.
+- `tests/e2e/test_plan_the_change.py` asserts the same thing on a real model's real plan, and does
+  so **by checking the filesystem rather than waiting for the node to raise** — its docstring gives
+  the reason: *"a test that trusted `PlannedFileNotFoundError` would pass on a node whose check had
+  been commented out."*
+
+So the sentence is a hint about a rule the substrate enforces and two tests assert. §0.4 is
+satisfied, and the sentence is doing the job it looks like it is doing: keeping a model from putting
+prose into a list of paths, which the substring of the requirement would not have prevented.
+
+**The pattern is the thing worth keeping.** A red run is a fact about a *request* until proven
+otherwise, and a suspicious line of code is a fact about a *rule* until someone has looked for the
+guard. Both of these looked like gaps on a fast read and were covered. The three things that turned
+out to be real defects — the supervisor's `ValidationError`, the `git checkout` in the wrong
+repository, and a test that could not pass — were all found by running something, and two of the
+three by running the wrong thing on purpose.
