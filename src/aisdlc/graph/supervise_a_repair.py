@@ -154,6 +154,21 @@ class ThereIsNoNodeForThatPlaceToStartAgainError(Exception):
     """
 
 
+class ARepairThatOnlyAGateMayDecideError(Exception):
+    """The rule is that the state machine releases a work item to a person and not to a peer.
+
+    **This type exists so a run that is sent back to another discipline stops with a sentence
+    rather than with a `StateMachineError` traceback.** The refusal underneath is correct — see
+    `_takes_the_work_item_from_the_holding_agent` — and a correct refusal delivered as a traceback
+    is still a defect, because the person reading it learns that something about agents is broken
+    rather than which hand-over was asked for and what the table allows instead.
+
+    **Nothing raises it yet.** It is the shell a test needs in order to be a test at all, and a
+    shell that raises nothing is the honest shape: a test that demanded this name before any code
+    produced it would fail on `ImportError`, which says nothing about the rule.
+    """
+
+
 def supervise_a_repair(
     work_item: WorkItem,
     projects_root: Path,
