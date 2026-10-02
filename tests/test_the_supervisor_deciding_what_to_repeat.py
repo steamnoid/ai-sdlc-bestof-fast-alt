@@ -612,9 +612,7 @@ def _a_work_item_at_the_delivery_gate() -> WorkItem:
     # **Three moves, because the table says so and nothing else may be jumped.** The rule being
     # read here is the transition table's, and a builder that went straight to the gate would be
     # a test asserting about a work item this system cannot be in.
-    picked_up = transition(
-        the_work_item, Stage.AWAITING_AGENT_PICKUP, THE_IMPLEMENTER, Role.DEV
-    )
+    picked_up = transition(the_work_item, Stage.AWAITING_AGENT_PICKUP, THE_IMPLEMENTER, Role.DEV)
     working = transition(picked_up, Stage.IN_PROGRESS_BY_AGENT, THE_IMPLEMENTER, Role.DEV)
     return transition(working, Stage.AWAITING_HUMAN_APPROVAL, None, Role.DEV)
 
@@ -672,9 +670,7 @@ def test_a_change_that_writes_nothing_is_handed_to_the_supervisor() -> None:
     from aisdlc.graph.agent_state import WHAT_STOPPED_THIS_RUN
     from aisdlc.graph.apply_node import apply_and_verify_in_this_run
 
-    what_the_plan_asked = ImplementationPlan(
-        files_to_change=["Dockerfile"], tests_to_add=[]
-    )
+    what_the_plan_asked = ImplementationPlan(files_to_change=["Dockerfile"], tests_to_add=[])
     a_state: AgentState = {
         "work_item": _a_work_item_at_the_delivery_gate(),
         "projects_root": Path("/nowhere"),
@@ -838,9 +834,7 @@ def test_every_refusal_the_change_can_raise_is_routed_somewhere() -> None:
         "read and would pass forever"
     )
 
-    unrouted = {
-        a_refusal for a_refusal in sorted(every_refusal) if a_refusal not in routed
-    }
+    unrouted = {a_refusal for a_refusal in sorted(every_refusal) if a_refusal not in routed}
     assert not unrouted, (
         f"{', '.join(unrouted)} can stop a run and nothing hands it to the supervisor. It is a "
         f"refusal a person could judge, which is the whole reason the supervisor exists, and a "

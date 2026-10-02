@@ -220,7 +220,7 @@ def test_a_claimed_dependency_is_one_the_repository_actually_declares(
 
 @pytest.mark.parametrize("a_real_report", list(LlmProvider), indirect=True)
 def test_the_report_says_what_it_was_not_shown(
-    a_real_report: tuple[ArchitectureReport, object]
+    a_real_report: tuple[ArchitectureReport, object],
 ) -> None:
     """The collections a gate reads are the glossary's, and no others.
 

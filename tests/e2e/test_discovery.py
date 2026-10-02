@@ -26,6 +26,8 @@ tier exists to prevent.
 
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from aisdlc.agents.discover_the_repository import discover_the_repository
@@ -38,6 +40,52 @@ from aisdlc.tools.github_clone_repository import ClonedRepository
 pytestmark = pytest.mark.e2e
 
 MUST_BE_FILLED = ("languages", "architecture_summary", "evidence_files")
+
+A_VERSION_IN_A_BUILD_SYSTEM = re.compile(r"\d+")
+"""A digit, and nothing cleverer: a build system names a version, so a version has a number in it.
+
+Loose on purpose. `node:22-bookworm`, `pip>=3.12`, `Docker` with no number, `make` with no
+number — this asks whether *a* number is present, and the repository is free to pin whatever it
+pins. The point is not to grade the answer; it is to tell the difference between a field that
+carries a version and one that carries a tool's name, which is the difference two real runs were
+refused at a gate over.
+"""
+
+
+@pytest.mark.parametrize("a_real_discovery", list(LlmProvider), indirect=True)
+def test_a_build_system_says_what_the_build_runs_on(
+    a_real_discovery: tuple[DiscoveryReport, DiscoveryAnswer],
+) -> None:
+    """The version a repository pins reaches the field named for it, or the field is refused.
+
+    **This is the half only a real model can answer, and it is the half the prompt change and the
+    validator exist for.** Two runs of this system were stopped at their first gate because the
+    report said `build_system: npm` while its own `key_components` carried the Dockerfile pinning
+    `node:22-bookworm`. The prompt now asks what the build runs on, and the artifact refuses a
+    bare noun — so a report reaching this assertion either carries a version or was refused.
+
+    **A repository with no build system says so and skips, loudly.** There is no version to name
+    there, and the question tells the model to leave the field out rather than guess, so an
+    absent field is this system's own word for "there is none" and is not a failure.
+    """
+    the_report, _ = a_real_discovery
+
+    if the_report.build_system is None:
+        pytest.skip(
+            "this repository shows no build system in its inspection, so there is no version to "
+            "check and the field is absent rather than wrong. The question tells the model to "
+            "leave it out rather than guess, and an absent field is read as absent."
+        )
+
+    assert A_VERSION_IN_A_BUILD_SYSTEM.search(the_report.build_system), (
+        f"build_system is {the_report.build_system!r} — no version in it. A person at a gate "
+        "cannot rule on a change about a required runtime while holding a report that says only "
+        "which "
+        "tool the build uses, and two real runs of this system were refused at exactly that point "
+        "with the same sentence: the report never records the runtime floors that would bound an "
+        "engines range."
+    )
+
 
 JUDGEMENTS_THE_DISCOVERY_ANSWER_MAKES = ("what_it_found", "what_it_could_not_settle")
 

@@ -250,9 +250,7 @@ def test_a_person_picking_two_of_five_gets_two_work_items_on_the_board(
 
     the_briefing = a_repository_briefed_itself(
         A_REPOSITORY,
-        *_the_seams_a_real_run_would_not(
-            _a_briefing_with(*the_five), a_repository_to_brief
-        ),
+        *_the_seams_a_real_run_would_not(_a_briefing_with(*the_five), a_repository_to_brief),
     )
     assert len(the_briefing.opportunities) == 5, "a briefing that proposed five"
 

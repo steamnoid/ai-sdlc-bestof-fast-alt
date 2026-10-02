@@ -29,6 +29,7 @@ from pathlib import Path
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langgraph.types import Command
+from pydantic import ValidationError
 
 from aisdlc.domain.work_item import WorkItem
 from aisdlc.graph.repeat_budget import (
@@ -165,18 +166,67 @@ def supervise_a_repair(
     resumed run finds it there — and a supervisor handed a state channel is a supervisor handed
     whatever the last node happened to write down, which on a resumed run is not necessarily what
     the earlier attempt said.
+
+    **An answer that cannot be validated stops this run, and says the validator's words.** This is
+    the one node in the pipeline with no correction loop: seven others spend from the shared budget
+    to ask a model again, and the supervisor asked once and propagated the `ValidationError`. A
+    real run reached the repair loop for the first time in this copy's history — six gates
+    approved, the change written, the suite run three times in a container — and died there with
+    `1 validation error for WhatToRepeat`, because the model gave verdicts for two agents and
+    forgot five. **A run that stops on a Python exception has stopped on a fault rather than on a
+    decision**, and the rule this repository exists to keep is that a refusal is a decision and is
+    recorded as one.
+
+    So the validators that make a supervisor's answer mean anything are also what makes it
+    un-answerable, and the two are the same thing: a verdict for every agent, a stop that names
+    what has not changed. A model whose answer cannot be expressed **has said nothing**, and a run
+    that received nothing should stop for the same reason and say why — naming the agents it
+    forgot, because a model correcting itself has to be told what it missed and not only that it
+    was wrong.
+
+    **A correction is not added here, and the reason is that the budget is shared.** Every other
+    node asks again and spends from `may_this_run_keep_asking`; adding a loop here would make the
+    eighth claim on one budget, and the count of things that may ask again is exactly the kind of
+    number that drifts when it is written per node. What is added instead is the outcome that was
+    already in this module for a model that declined in words — a refusal carrying the reason — so
+    an un-answerable model and an answerable one that declines leave the same kind of record.
     """
     what_the_record_says = what_people_said_about(
         work_item.repository, work_item.work_item_id, projects_root
     )
 
-    the_decision = WhatToRepeat.model_validate(
-        ask_a_model_for(model, WhatToRepeat).invoke(
-            the_prompt_to_supervise_a_repair(
-                work_item, what_the_record_says.comments, what_stopped_the_run
+    try:
+        the_decision = WhatToRepeat.model_validate(
+            ask_a_model_for(model, WhatToRepeat).invoke(
+                the_prompt_to_supervise_a_repair(
+                    work_item, what_the_record_says.comments, what_stopped_the_run
+                )
             )
         )
-    )
+    except ValidationError as no_verdict_was_reachable:
+        why_this_run_stops = (
+            f"{THE_AGENT_THAT_SUPERVISES_A_REPAIR} reached no verdict about what to repeat. The "
+            f"answer it was given cannot be one:\n\n{no_verdict_was_reachable}\n\nThis run "
+            "stops rather than trying again, and the reason is that there was nothing to act on. "
+            "A run that returned quietly would read as a run that finished."
+        )
+
+        # **The card is written before the refusal, not after, because after is never reached.**
+        # Every other note this module leaves is written on the way to a `Command`; a run that
+        # raises here would otherwise leave a card saying it was refused for the reason the
+        # *implementer* gave, which is now a lie. This one is written first so that the sentence a
+        # person reads is the sentence that stopped the run.
+        a_comment_was_left(
+            work_item,
+            what_was_said=why_this_run_stops,
+            by=THE_AGENT_THAT_SUPERVISES_A_REPAIR,
+            at=datetime.now(UTC),
+            projects_root=projects_root,
+        )
+
+        raise TheSupervisorJudgedThisIsNotRepairingError(why_this_run_stops) from (
+            no_verdict_was_reachable
+        )
 
     a_comment_was_left(
         work_item,

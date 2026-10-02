@@ -144,9 +144,7 @@ def test_work_already_tracked_is_refused_before_anything_is_filed() -> None:
 
 
 def _issues_about_session_cookies() -> tuple[httpx.Client, Repository]:
-    the_client, _ = _a_github_answering(
-        [_an_issue(7, "The session cookie has no expiry")]
-    )
+    the_client, _ = _a_github_answering([_an_issue(7, "The session cookie has no expiry")])
     return the_client, A_REPOSITORY
 
 
@@ -227,9 +225,7 @@ def test_filing_refuses_a_duplicate_before_anything_is_opened() -> None:
             the_report,
             [an_about_being_filed],
             opening,
-            what_was_already_tracked=read_the_open_issues(
-                *_issues_about_session_cookies()
-            ),
+            what_was_already_tracked=read_the_open_issues(*_issues_about_session_cookies()),
         )
 
     assert what_was_opened == [], (

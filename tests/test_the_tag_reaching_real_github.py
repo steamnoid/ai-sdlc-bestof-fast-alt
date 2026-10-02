@@ -50,9 +50,7 @@ def _the_repository_to_file_against() -> str:
 
 def _why_this_proves_nothing() -> str | None:
     if not the_credential().strip():
-        return (
-            "GITHUB_TOKEN is not set, so nothing was filed and the tag was not proven on GitHub"
-        )
+        return "GITHUB_TOKEN is not set, so nothing was filed and the tag was not proven on GitHub"
     if not _the_repository_to_file_against().strip():
         return (
             f"{THE_SETTING_NAMING_WHERE_TO_FILE} is not set, so there is no repository to file "
@@ -173,9 +171,9 @@ def _a_branch_with_one_commit_on_it(
         f"/repos/{repository.owner}/{repository.name}/contents/{branch}-proof.md",
         json={
             "message": "Proving the project's name reaches a pull request",
-            "content": base64.b64encode(
-                b"This file exists so a pull request has a diff.\n"
-            ).decode("ascii"),
+            "content": base64.b64encode(b"This file exists so a pull request has a diff.\n").decode(
+                "ascii"
+            ),
             "branch": branch,
         },
         headers=headers,
@@ -224,9 +222,7 @@ def test_a_pull_request_opened_for_real_carries_the_projects_full_name() -> None
     # test had caused and never cleaned up, which is the worst kind: it reads like the remote
     # misbehaving and it is this file's own tidiness failing.
     try:
-        _a_branch_with_one_commit_on_it(
-            the_client, the_credential(), the_repository, the_branch
-        )
+        _a_branch_with_one_commit_on_it(the_client, the_credential(), the_repository, the_branch)
 
         opened = open_a_pull_request(
             a_pull_request_to_open(
