@@ -823,11 +823,42 @@ def test_the_third_question_is_asked_of_a_different_checkout_and_the_run_is_refu
     what_the_second_run_saw = after.what_a_run_of_the_suite_could_have_seen()
     what_the_first_run_saw = before.what_a_run_of_the_suite_could_have_seen()
 
-    assert what_the_third_run_saw == what_the_first_run_saw, (
-        "the third run of the suite was not handed the repository as the first was. The change "
-        "was not put back before the question was asked, so the two answers differ for a reason "
-        "that has nothing to do with whether anything observed the change — and a question put "
-        "to two different checkouts is a question about the difference between them"
+    # **The third run must equal the first on the files and exceed it by exactly the tests.**
+    #
+    # This assertion was `what_the_third_run_saw == what_the_first_run_saw`, and it could not pass
+    # on any run — verified failing at `8745235~1` and at `8745235`, byte-identically. The reason
+    # is a rule in `apply_the_plan.py` that is deliberate and stated: *"Only the files the plan
+    # named, and never the tests. The tests are what the question is about — a suite with the tests
+    # taken away says nothing either way."* So the third run holds the parent's text **and** the
+    # tests the plan added, and the first run holds the parent's text and not those tests.
+    #
+    # **And the contradiction was introduced by the very method written to prevent a false pass.**
+    # `what_a_run_of_the_suite_could_have_seen` exists because comparing the texts alone says two
+    # different checkouts are identical; it closed that trap by adding which files are on the
+    # disk, and then the assertion above demanded equality on that second half too. The two
+    # decisions are each defensible alone and together they are unsatisfiable.
+    #
+    # So the claim is split into the two things it is actually made of: the text went back to the
+    # parent's, and the only thing the third run holds that the first does not is the plan's own
+    # tests. A weaker version would compare `files_to_change` alone — which is empty for a
+    # test-only plan, and would pass without observing anything.
+    the_text_the_third_run_saw, the_tests_the_third_run_saw = what_the_third_run_saw
+    _, the_tests_the_first_run_saw = what_the_first_run_saw
+
+    assert the_text_the_third_run_saw[the_file_the_plan_changes] == what_the_parent_commit_holds, (
+        f"the third run of the suite was handed {the_file_the_plan_changes} holding "
+        f"{the_text_the_third_run_saw[the_file_the_plan_changes]!r} rather than what this run's "
+        f"parent commit holds. The change was not put back before the question was asked, so the "
+        f"third run is the second run wearing a different name"
+    )
+    assert set(the_tests_the_third_run_saw) - set(the_tests_the_first_run_saw) == set(
+        a_plan_naming_a_test_this_run_should_refuse.tests_to_add
+    ), (
+        "the third run does not hold exactly the tests this plan added and the first run did not. "
+        f"It holds {sorted(the_tests_the_third_run_saw)} where the first held "
+        f"{sorted(the_tests_the_first_run_saw)}, so the checkout the third question was asked "
+        "about is not the checkout this design describes — which is the file the plan changed plus "
+        "the tests it named, and anything else is something else entirely"
     )
     assert what_the_second_run_saw != what_the_third_run_saw, (
         "the second and the third runs were handed identical checkouts, so this change is "
