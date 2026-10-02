@@ -189,7 +189,17 @@ def the_question_this_gate_asks(
         DiscoveryReport(
             languages=["TypeScript", "JavaScript"],
             frameworks=["React", "Express"],
-            build_system="npm",
+            # **The command and not the tool, and that is the artifact's own rule rather than
+            # this file's taste.** `DiscoveryReport` refuses a `build_system` that names one tool
+            # and nothing else, because a person at a gate cannot rule on a change about a
+            # runtime while holding a report that says only which tool — and a real run proved it
+            # by answering `npm` and being refused.
+            #
+            # **This value was `"npm"` until a real-tier run caught it.** The rule arrived in the
+            # same branch as this suite and `pytest -q` stayed green: 106 tests, no model, and
+            # nothing here constructed a `DiscoveryReport`. `npm ci` is also what this repository
+            # actually runs, so the fix makes the fixture true rather than merely acceptable.
+            build_system="npm ci",
             ci_system=None,
             architecture_summary=(
                 f"A React front end under web-app/ served by a Node API, built with npm and "
