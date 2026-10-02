@@ -610,6 +610,8 @@ Stated rather than left to be discovered.
   | `test_a_plan_that_adds_a_file_is_a_plan.py` | that a plan whose whole content is a new file is a plan, and that its refusal names every field it can be empty of |
   | `test_a_test_at_the_repository_root_is_judged_too.py` | that a test at the repository root is judged by the runner's own `include` lines like any other directory |
   | `test_every_field_a_stage_asks_for_is_a_field_the_answer_has.py` | that every stage's question names only fields the artefact has — the planner asked for `what_it_expectes_next`, which no type has |
+  | `test_a_build_system_names_what_the_build_runs_on.py` | that the question asks what the build runs on, and that `build_system: npm` is refused — two real runs were stopped at their first gate over that field |
+  | `test_what_an_inspection_says_it_did_not_show_is_every_file_it_did_not_show.py` | that every source file not read is named under *what was not shown*, including the ones a name filter never selected |
   | `test_every_stage_reasoning_about_a_file_is_shown_it.py` | that every stage reading a repository is shown what is *inside* the files, and that the set of such stages is derived from the signatures rather than written out |
   | `test_the_tables_are_read_rather_than_kept_up_to_date.py` | that the tables here are read rather than trusted — and the third count this repository let go stale |
 
