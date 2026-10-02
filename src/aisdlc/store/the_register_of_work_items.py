@@ -56,28 +56,33 @@ from aisdlc.domain.work_item import WorkItem
 # register opened on a fresh deployment and a register opened on a run's second process are the
 # same code path. A deployment that later needs a version table for migrations has one place to
 # add it.
-_THE_SCHEMA = """
-CREATE TABLE IF NOT EXISTS work_items (
-    work_item_id   TEXT PRIMARY KEY,
-    repository     TEXT NOT NULL,
-    stage          TEXT NOT NULL,
-    role           TEXT NOT NULL,
-    commissioned_by TEXT NOT NULL,
-    agent          TEXT,
-    requested      TEXT NOT NULL,
-    work_done      TEXT NOT NULL,
-    version        INTEGER NOT NULL DEFAULT 0
-);
-
-CREATE TABLE IF NOT EXISTS transitions (
-    work_item_id TEXT NOT NULL,
-    frm_stage    TEXT NOT NULL,
-    to_stage     TEXT NOT NULL,
-    agent        TEXT,
-    moved_at     TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS transitions_by_work_item ON transitions (work_item_id);
-"""
+_THE_SCHEMA = (
+    """
+    CREATE TABLE IF NOT EXISTS work_items (
+        work_item_id   TEXT PRIMARY KEY,
+        repository     TEXT NOT NULL,
+        stage          TEXT NOT NULL,
+        role           TEXT NOT NULL,
+        commissioned_by TEXT NOT NULL,
+        agent          TEXT,
+        requested      TEXT NOT NULL,
+        work_done      TEXT NOT NULL,
+        version        INTEGER NOT NULL DEFAULT 0
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS transitions (
+        work_item_id TEXT NOT NULL,
+        frm_stage    TEXT NOT NULL,
+        to_stage     TEXT NOT NULL,
+        agent        TEXT,
+        moved_at     TEXT NOT NULL
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS transitions_by_work_item ON transitions (work_item_id)
+    """,
+)
 
 _THE_WORK_ITEM_COLUMNS = (
     "work_item_id, repository, stage, role, commissioned_by, agent, requested, work_done, version"
@@ -130,7 +135,25 @@ class StaleWorkItemError(Exception):
 
 
 def _prepared(connection: sqlite3.Connection) -> None:
-    connection.executescript(_THE_SCHEMA)
+    """Make sure the tables are there, and commit nothing while saying so.
+
+    **One statement per `execute`, and not `executescript`, and the difference is the whole
+    point of this function.** Every caller in this module runs it — including the five that read
+    and write nothing — so whatever it does to the transaction, it does on behalf of readers. And
+    `executescript` is documented to issue a `COMMIT` before it runs the script: a reader asking
+    "is this work item recorded?" was making the last recorder's write durable, and a board
+    polling every two seconds made a half-recorded stage durable on purpose. `execute` does not
+    commit, which is why the schema is a tuple of statements rather than one string — a string
+    would need splitting, and the only reason to split it would have been to hand it to
+    `executescript` again.
+
+    **And the cost of this function running on every call is paid deliberately.** It is a
+    `CREATE TABLE IF NOT EXISTS` per table per call, which is not free; the alternative is
+    remembering whether *this connection* prepared anything, and that is a fact two callers on one
+    connection cannot both hold. Cheap and idempotent beats remembered and wrong.
+    """
+    for a_statement in _THE_SCHEMA:
+        connection.execute(a_statement)
 
 
 def _a_row_for(work_item: WorkItem, version: int) -> tuple[object, ...]:

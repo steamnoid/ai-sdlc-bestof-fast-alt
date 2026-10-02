@@ -35,29 +35,38 @@ from aisdlc.approval.approval_decision import ApprovalDecision
 from aisdlc.approval.approval_gate import the_record_left_by_a_decision
 from aisdlc.domain.approval import Approval
 
-_THE_TABLES = """
+_THE_TABLES = (
+    """
 CREATE TABLE IF NOT EXISTS artifacts (
     work_item_id TEXT NOT NULL,
     artifact_id TEXT NOT NULL,
     artifact_version INTEGER NOT NULL,
     written_by TEXT NOT NULL,
     written_at TEXT NOT NULL
-);
+)
+    """,
+    """
 CREATE TABLE IF NOT EXISTS events (
     work_item_id TEXT NOT NULL,
     what_happened TEXT NOT NULL,
     happened_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS events_by_work_item ON events (work_item_id);
-
+)
+    """,
+    """
+CREATE INDEX IF NOT EXISTS events_by_work_item ON events (work_item_id)
+    """,
+    """
 CREATE TABLE IF NOT EXISTS notes (
     work_item_id TEXT NOT NULL,
     said_by TEXT NOT NULL,
     what_was_said TEXT NOT NULL,
     said_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS notes_by_work_item ON notes (work_item_id);
-
+)
+    """,
+    """
+CREATE INDEX IF NOT EXISTS notes_by_work_item ON notes (work_item_id)
+    """,
+    """
 CREATE TABLE IF NOT EXISTS decisions (
     work_item_id TEXT NOT NULL,
     artifact_id TEXT NOT NULL,
@@ -66,9 +75,12 @@ CREATE TABLE IF NOT EXISTS decisions (
     decided_by TEXT NOT NULL,
     decided_at TEXT NOT NULL,
     reason TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS decisions_by_work_item ON decisions (work_item_id);
-
+)
+    """,
+    """
+CREATE INDEX IF NOT EXISTS decisions_by_work_item ON decisions (work_item_id)
+    """,
+    """
 CREATE TABLE IF NOT EXISTS approvals (
     work_item_id TEXT NOT NULL,
     artifact_id TEXT NOT NULL,
@@ -76,15 +88,20 @@ CREATE TABLE IF NOT EXISTS approvals (
     approved_by TEXT NOT NULL,
     approved_at TEXT NOT NULL,
     reason TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS approvals_by_work_item ON approvals (work_item_id);
-
+)
+    """,
+    """
+CREATE INDEX IF NOT EXISTS approvals_by_work_item ON approvals (work_item_id)
+    """,
+    """
 CREATE TABLE IF NOT EXISTS what_a_gate_is_asking_about (
     work_item_id TEXT PRIMARY KEY,
     artifact_id TEXT NOT NULL,
     artifact_version INTEGER NOT NULL
-);
-"""
+)
+    """,
+)
+
 
 
 class WhatARunSaid(BaseModel):
@@ -123,7 +140,17 @@ class AComment(BaseModel):
 
 
 def _prepared(connection: sqlite3.Connection) -> None:
-    connection.executescript(_THE_TABLES)
+    """Make sure the tables are there, and commit nothing while saying so.
+
+    **One statement per `execute`, and not `executescript`, for the reason the register's own
+    `_prepared` says.** Every caller runs this — including the readers — and `executescript`
+    commits whatever transaction was open before the script, so a board reading a card made a
+    run's half-recorded decision durable. `execute` does not commit, which is why the schema is a
+    tuple of statements rather than one string: a string would need splitting, and the only reason
+    to split it would have been to hand it back to `executescript`.
+    """
+    for a_statement in _THE_TABLES:
+        connection.execute(a_statement)
 
 
 class AnArtifactWasWritten(BaseModel):
