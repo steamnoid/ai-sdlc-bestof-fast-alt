@@ -273,6 +273,18 @@ def _the_source_that_may_carry_risk(inside: Path) -> tuple[list[str], list[str]]
     what_was_not: list[str] = []
 
     for a_path in _every_source_file_in(inside):
+        if not _this_name_says_a_file_may_matter(inside, a_path):
+            # **Named rather than skipped, and this line is the fix.** A file the name filter
+            # rejects is not a file that was considered and left out -- it is a file nobody in this
+            # run ever knew about, which is a worse state than being left out, because a model
+            # cannot notice a coverage it does not know it has. The section below promises to name
+            # what was not shown, and a promise computed over the *filtered* set is true and
+            # useless: a real gate read "every file whose name suggests it may carry risk is above"
+            # alongside a report that reasoned about `web-app/src/lib/db.js`, a file no word of
+            # the filter matches.
+            what_was_not.append(a_path)
+            continue
+
         its_text = _the_text_of(inside, a_path)
 
         if its_text is None:
@@ -290,7 +302,14 @@ def _the_source_that_may_carry_risk(inside: Path) -> tuple[list[str], list[str]]
 
 
 def _every_source_file_in(inside: Path) -> list[str]:
-    """Every source file, nearest the root first, skipping anybody else's code.
+    """Every source file in this repository, nearest the root first, skipping nobody's code.
+
+    **Every one of them, and not only the ones whose name suggests they matter.** The name filter
+    decides which files get *read*; it used to decide which files *existed* as far as the
+    inspection was concerned, so a file it rejected was invisible in both directions -- not shown,
+    and not named as withheld. A model can notice a coverage it knows it has and cannot notice one
+    it does not, which is how a report came to reason about `lib/db.js` while the inspection
+    insisted that nothing had been left out. A real gate refused exactly that report.
 
     **Sorted by depth and then by path, so two runs of one work item are comparable.** An
     inspection whose order came out of the file system would be a different question each time,
@@ -313,12 +332,24 @@ def _every_source_file_in(inside: Path) -> list[str]:
             its_name not in FILES_NAMED_WITHOUT_AN_EXTENSION
         ):
             continue
-        if not any(a_word in its_name for a_word in WHAT_A_NAME_SAYS_A_FILE_MAY_MATTER):
-            continue
-
         found.append((len(its_parts), str(a_path.relative_to(inside))))
 
     return [a_path for _, a_path in sorted(found)]
+
+
+def _this_name_says_a_file_may_matter(inside: Path, a_path: str) -> bool:
+    """Whether this file's name is one a reader of a risk should be shown, judged by name alone.
+
+    **A name is the only signal available without reading every file**, and a cap is what keeps a
+    large repository from becoming a paste. `Dockerfile`, `Makefile` and `package.json` carry no
+    extension, which is why they are listed separately: a run's gate refused a security report for
+    reasoning from a `Dockerfile` this filter could not see.
+
+    **And the order the cap bites in is depth first and then path**, so the files nearest the
+    root -- which is where those three live -- are the ones that survive it.
+    """
+    its_name = Path(a_path).name.lower()
+    return any(a_word in its_name for a_word in WHAT_A_NAME_SAYS_A_FILE_MAY_MATTER)
 
 
 def _the_text_of(inside: Path, a_path: str) -> str | None:
