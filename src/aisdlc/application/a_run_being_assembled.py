@@ -209,6 +209,7 @@ def a_run_beginning_at(
         "clone": None,
         "the_commit_anything_proved": None,
         "which_checks_went_green": None,
+        "the_commit_that_landed": None,
         "requested_stage": work_item.stage,
         "requested_agent": None,
         "requested_role": work_item.role,

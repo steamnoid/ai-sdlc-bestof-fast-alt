@@ -71,6 +71,7 @@ class AgentState(TypedDict):
     opened_pull_request: AnOpenedPullRequest | None
     the_commit_anything_proved: str | None
     which_checks_went_green: list[str] | None
+    the_commit_that_landed: str | None
     presented_artifact_id: str
     presented_artifact_version: int
     repair: WhatToRepeat | None

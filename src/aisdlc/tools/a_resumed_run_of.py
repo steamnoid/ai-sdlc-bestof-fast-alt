@@ -121,6 +121,7 @@ def _the_state_of(
         "requested_role": work_item.role,
         "the_commit_anything_proved": None,
         "which_checks_went_green": None,
+        "the_commit_that_landed": None,
         "written_files": None,
         "opened_pull_request": None,
         "repair": None,

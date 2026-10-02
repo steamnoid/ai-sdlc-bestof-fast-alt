@@ -57,6 +57,7 @@ from aisdlc.graph.discover_node import (
     Discover,
     discover_the_repository_in_this_run,
 )
+from aisdlc.graph.merge_node import WHERE_THE_DELIVERY_IS_MERGED, merge_the_delivery_in_this_run
 from aisdlc.graph.pickup_node import (
     begin_delivering_the_work_item,
     begin_describing_the_architecture,
@@ -790,8 +791,13 @@ def _the_delivery_stage(graph: StateGraph, delivery: TheDeliveryOfThisRun) -> No
             state, delivery.ask_whether_the_suite_went_green
         ),
     )
-    graph.add_edge(
-        "ask_github_whether_the_suite_went_green", "mark_the_work_item_delivered"
+    graph.add_node(
+        WHERE_THE_DELIVERY_IS_MERGED,
+        lambda state: merge_the_delivery_in_this_run(state, delivery.merge_the_pull_request),
     )
+    graph.add_edge(
+        "ask_github_whether_the_suite_went_green", WHERE_THE_DELIVERY_IS_MERGED
+    )
+    graph.add_edge(WHERE_THE_DELIVERY_IS_MERGED, "mark_the_work_item_delivered")
     graph.add_edge("mark_the_work_item_delivered", "apply_the_delivery_of_the_run")
     graph.add_edge("apply_the_delivery_of_the_run", THE_RUN_IS_OVER)

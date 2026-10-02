@@ -74,6 +74,7 @@ from aisdlc.tools.github_client import Addresses
 from aisdlc.tools.github_clone_repository import RepositoryToClone
 from aisdlc.tools.github_create_branch import PushedBranch
 from aisdlc.tools.github_create_pull_request import AnOpenedPullRequest
+from aisdlc.tools.merge_a_pull_request import WhatTheMergeLanded
 from aisdlc.tools.run_tests import SuiteOutcome
 from aisdlc.tools.the_suite_went_green import WhatTheSuiteSaid
 from aisdlc.tools.why_the_suite_may_not_be_merged import (
@@ -524,7 +525,7 @@ def test_a_run_whose_commit_nothing_proved_does_not_say_it_delivered(
 
 
 def _a_delivery_that_only_writes_down(
-    clone_path: Path, ask_whether_the_suite_went_green=None
+    clone_path: Path, ask_whether_the_suite_went_green=None, merge_the_pull_request=None
 ) -> TheDeliveryOfThisRun:
     """The second replacement: a delivery that reports what it would have done.
 
@@ -546,6 +547,15 @@ def _a_delivery_that_only_writes_down(
             or (
                 lambda the_pull_request, repository: WhatTheSuiteSaid(
                     head_commit="c" * 40, which_checks_went_green=["the_gate"]
+                )
+            )
+        ),
+        merge_the_pull_request=(
+            merge_the_pull_request
+            or (
+                lambda wanted: WhatTheMergeLanded(
+                    commit=wanted.the_commit_a_merge_may_land,
+                    what_github_said="this double does not merge, and says so",
                 )
             )
         ),
