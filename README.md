@@ -594,6 +594,7 @@ Stated rather than left to be discovered.
 
   | the default suite, no network and no credential | what it holds this repository to |
   |---|---|
+  | `test_a_model_that_answers_nothing_is_asked_again.py` | that a model answering nothing is asked again and told what was wrong, which is what every other reasoning node already did |
   | `test_a_run_from_a_request_to_a_delivery.py` | a run from a sentence to a delivery, both repairs walked end to end, and the supervisor's planner route ending a run with a sentence rather than a `StateMachineError` |
   | `test_what_two_real_runs_found.py` | the defects two real runs found, and the inspections that carry the code now |
   | `test_the_supervisor_deciding_what_to_repeat.py` | every refusal routes to the supervisor, and no node chooses a destination *and* carries an edge |

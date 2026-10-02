@@ -22,13 +22,19 @@ narrower — the model writes titles and bodies, and the system turns them into 
 
 from __future__ import annotations
 
+import time
+
 from langchain_core.language_models.chat_models import BaseChatModel
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
 from aisdlc.agents.discovery_report import DiscoveryReport
 from aisdlc.agents.what_an_agent_judged import WhatAnAgentJudged
 from aisdlc.domain.commissioned_request import CommissionedRequest
 from aisdlc.llm.asking_a_model_for import ask_a_model_for
+from aisdlc.llm.correction_budget import (
+    how_a_model_is_told_what_was_wrong,
+    may_this_run_keep_asking,
+)
 
 
 class AProposedRequest(BaseModel):
@@ -120,13 +126,29 @@ class TheWorkARepositoryShowsAnswer(BaseModel):
 
 def the_prompt_to_propose_the_work_this_repository_shows(
     report: DiscoveryReport,
+    what_was_wrong_about_the_last_answer: str | None = None,
 ) -> str:
     """Show the repository as it was found, and ask what work that shows.
 
     **The report goes in whole, and the test says so.** A prompt carrying the report's name
     rather than the report would satisfy every other test in this file while proposing work
     about a summary of what the repository is rather than about what is wrong with it.
+
+    **And the correction is part of the question rather than an apology before it.** This
+    function used to take only the report, which meant the loop below could not exist: a model
+    asked the same question twice with no word about why the first answer was refused answers it
+    the same way twice. Every other reasoning node in this package has carried this argument since
+    the first one of them needed it.
     """
+    correction = (
+        ""
+        if what_was_wrong_about_the_last_answer is None
+        else (
+            "\nYour last answer was wrong, and this is what was wrong with it:\n"
+            f"{what_was_wrong_about_the_last_answer}\n"
+        )
+    )
+
     return (
         "You have read a repository and written what it is. Read that report below and say "
         "what work this repository shows.\n\n"
@@ -140,7 +162,7 @@ def the_prompt_to_propose_the_work_this_repository_shows(
         + "".join(f"- {a_component}\n" for a_component in report.key_components)
         + "\nWrite each piece of work as a request somebody could have typed: a title and a "
         "body that says what is wrong and why it matters. A request whose body says nothing "
-        "is a title in a tracker, and nobody can work from that."
+        "is a title in a tracker, and nobody can work from that." + correction
     )
 
 
@@ -154,12 +176,34 @@ def propose_the_work_this_repository_shows(
     nothing in it is worthless to whoever reads it next rather than merely wrong here: a
     product analyst is asked to plan from the body alone, and four empty lists were once
     passed for a plan and the implementer then read a plan naming nothing to do.
+
+    **And it asks again, because this node was the only one that did not.** Every other
+    reasoning node in this package loops on `may_this_run_keep_asking` and hands the model what
+    was wrong. This one invoked once, and a real run answered `None` — a shape this deployment's
+    model produces routinely, and its own `.env` says so — which ended the stage with a
+    `ValidationError` rather than a repair. A run that stops because a model returned nothing is
+    a run stopped by the shape of an answer rather than by anything anybody decided.
     """
-    the_answer = TheWorkARepositoryShowsAnswer.model_validate(
-        ask_a_model_for(the_model, TheWorkARepositoryShowsAnswer).invoke(
-            the_prompt_to_propose_the_work_this_repository_shows(report)
-        )
-    )
+    asking = ask_a_model_for(the_model, TheWorkARepositoryShowsAnswer)
+    what_was_wrong: str | None = None
+    began_at = time.monotonic()
+    asked_so_far = 0
+    last: ValidationError | None = None
+
+    while may_this_run_keep_asking(asked_so_far, began_at):
+        asked_so_far += 1
+        try:
+            the_answer = TheWorkARepositoryShowsAnswer.model_validate(
+                asking.invoke(
+                    the_prompt_to_propose_the_work_this_repository_shows(report, what_was_wrong)
+                )
+            )
+            break
+        except ValidationError as refused:
+            what_was_wrong = how_a_model_is_told_what_was_wrong(refused)
+            last = refused
+    else:
+        raise last  # type: ignore[misc]
 
     the_requests = [
         CommissionedRequest(title=a_request.title, body=a_request.body)
