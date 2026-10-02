@@ -24,11 +24,20 @@ from pydantic import BaseModel
 
 from aisdlc.domain.repository import Repository
 from aisdlc.graph.deliver_node import OpenThePullRequest, PushTheBranch
+from aisdlc.graph.suite_node import AskWhetherTheSuiteWentGreen
 
 
 class TheDeliveryOfThisRun(BaseModel):
-    """Whose copy to deliver from, and the two things that put the delivery on a remote."""
+    """Whose copy to deliver from, and the three things that land the delivery on a remote.
+
+    **The third one is asked about the remote's own record, and that is a different kind of
+    fact from the other two.** `push_the_branch` and `open_the_pull_request` put a delivery on
+    GitHub; `ask_whether_the_suite_went_green` reads back what GitHub says about it. A run that
+    can do the first two and not the third reports a delivery on the strength of its own
+    intention, which is the one claim a delivery must not make about somebody else's repository.
+    """
 
     our_copy: Repository
     push_the_branch: PushTheBranch
     open_the_pull_request: OpenThePullRequest
+    ask_whether_the_suite_went_green: AskWhetherTheSuiteWentGreen
