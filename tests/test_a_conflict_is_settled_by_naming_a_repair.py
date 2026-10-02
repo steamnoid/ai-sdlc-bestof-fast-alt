@@ -267,6 +267,51 @@ def test_leaving_it_open_leaves_it_open_and_says_why_on_the_card() -> None:
     )
 
 
+def test_the_grounds_are_left_on_the_card_which_ever_repair_was_named() -> None:
+    """A model gave a reason. A run that discards it has made a decision and hidden its grounds.
+
+    **Found by a real model and not by any unit test.** Asked which repair to take, the model
+    named the rebase and said why — and the run rebased and wrote nothing down. The grounds were
+    on the card for *one* of the two repairs and for neither of the other half of the behaviour:
+    `_a_rebase_is_taken` returned a bare `goto`, so the branch where the run **does something** was
+    the branch that kept no record of why it did it.
+
+    **A decision nobody can explain third is not a decision that happened.** Every other verdict in
+    this package carries its grounds for the same reason `ApprovalDecision.reason` is required — a
+    reason is the only thing a reader has when the run is rebase'd twice on a branch that is still
+    behind — and this one was the only verdict whose grounds were dropped on the way past.
+    """
+    the_model = _AModelThatAnswers(
+        [
+            {
+                "the_repair": (
+                    WhatToDoWhenThePullRequestWillNotMerge.REBASE_IT_AND_TRY_AGAIN.value
+                ),
+                "why": "the branch has fallen behind and replaying it is the whole of the fix",
+            }
+        ]
+    )
+
+    where_it_went = settle_a_conflict_in_this_run(
+        _the_state_a_conflict_reaches_the_run_in(),
+        the_model,  # type: ignore[arg-type]
+        lambda *arguments: WhatTheRebaseLanded(commit="e" * 40, what_git_said="forced update"),
+        THE_CONFLICT_IN_GITHUBS_WORDS,
+    )
+
+    assert where_it_went.update, (
+        "the run rebased and wrote nothing to the card. The model named a repair and said why, and "
+        "a run that discards the grounds of a decision it acted on leaves a person reading a "
+        "rebase with nothing to read"
+    )
+    what_it_said = "".join(str(each) for each in where_it_went.update.values())
+    assert "fallen behind" in what_it_said, (
+        f"the card says {what_it_said!r} and not the grounds the model itself gave. The only place "
+        "a person reads why a delivery stopped is the note this run leaves, and a paraphrase "
+        "written here would be a reason nobody gave"
+    )
+
+
 def test_the_conflict_reaches_the_model_in_the_words_github_used() -> None:
     """A decision made on a summary of a conflict is a decision about the summary."""
     the_model = _AModelThatAnswers(
