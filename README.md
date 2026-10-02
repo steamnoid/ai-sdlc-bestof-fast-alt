@@ -732,3 +732,54 @@ runtime**, the same conclusion the six runs in `ai-sdlc-bestof-fast-selfaware` r
 and the interactive path — the only mode in which this repository has ever delivered anything —
 needs a person at eight gates. Turning the finding above into a field is a change to what
 `DiscoveryReport` *is*, which is a glossary decision rather than a test.
+
+---
+
+## Six real runs, and every refusal names what I should have written instead
+
+Runs 5 to 10 continued the section above on the same repository, and they are a different kind of
+finding from runs 1 to 4, because by the fifth I had stopped asking for things and started asking
+for **one change with a provable acceptance criterion**.
+
+**Runs 5 and 6 were the same request and they were refused for two different reasons, both of
+them right.** The work was to add a `npm run typecheck` step to `.github/workflows/ci.yml` and a
+unit test that fails if it is removed. The repository has the script, the workflow does not run
+it, and the gap is real. Two runs, two refusals, at the requirements gate:
+
+> **Run 5**, on an artifact that contradicted itself: *Requirement 1 fixes the typecheck step in
+> the same job and install as `npm test`, while ambiguity 3 declares that exact placement
+> undetermined and routes it to a person — the artifact both decides and blocks on the same
+> question, so an implementer must either halt or pick a side its own text reserves for a human.*
+
+That is the one I would not have predicted, and it is the sharpest thing this gate has ever said
+about this repository. `Requirements` has a list of requirements and a list of ambiguities, and
+**nothing checks that the two do not disagree.** An artifact that fixes an answer in one field
+and defers the same answer in another is structurally impossible to satisfy, and it reached a
+reviewer whole.
+
+> **Run 6**, on a criterion no in-repo change can decide: *the third — "a commit that introduces
+> a TypeScript type error under `web-app` produces a failing workflow run" — is not decidable by
+> anything this run writes: it needs a hosted Actions run on a pushed commit.*
+
+Also right, and it named the repair: rescope the criterion to something the suite can assert
+in-repo, or move it out and call it a post-merge check for a person.
+
+**So the honest count for this deployment is six runs, six refusals, zero deliveries, and every
+single refusal was correct.** Two runs ago I wrote that the gate is not a formality. This is the
+measurement that says it is not a formality *and* that **autopilot cannot deliver on this
+repository as it stands**, because the two things that decide a delivery are a plan and an
+implementation, and the plan is exactly what the gate refuses when it contradicts itself.
+
+**What I have not done, and will not pretend otherwise:** no pull request has been opened by this
+branch. The one that exists on the upstream ([#9](https://github.com/paligakrzychu/wellbeing-tracker-public/pull/9),
+`DELIVERY.md`, +39) was opened on 2026-09-28 by the frozen source this repository was forked from,
+two weeks before this branch existed. Counting it as a delivery of mine would be the exact
+"decision that cannot be found later is not a record, it is a claim" mistake this repository is
+built against.
+
+**And the finding worth keeping is narrower than "autopilot delivers nothing."** It is that the
+gate refused correctly in **six cases out of six** without ever refusing for the wrong reason —
+never for "insufficient", always naming a specific criterion, a specific missing field, or a
+specific pair of colliding statements. A gate that refuses everything also refuses everything.
+This one refused everything *and was right every time*, and the difference is the thing that took
+twelve runs to establish.
