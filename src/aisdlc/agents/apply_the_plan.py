@@ -52,6 +52,30 @@ class TheImplementerWasNeverAskedError(Exception):
     """
 
 
+class TheCommitHoldsNoneOfTheFilesThePlanNamedError(Exception):
+    """The plan named files to change, and the commit changed none of them.
+
+    **This refusal was measured, not reasoned about.** A real run ended with
+    `ATestThatPassesWithoutTheChangeError` — *the suite is green after this change, and green again
+    with it taken away* — and the log carries the reason:
+
+        files_to_change=['package.json']
+        1 file changed, 29 insertions(+)
+
+    The commit never touched `package.json`, so `git checkout HEAD~1 -- package.json` **succeeded
+    and wrote nothing**, the third question was asked over a checkout still holding the change in
+    full, and the run read that answer as *nothing observes this change* and refused the work.
+
+    **So the change was refused for a reason that was an artefact of the command asking the
+    question.** Nothing about the change was wrong; the change was not where the plan said it
+    would be. Four of six real-tier runs ended here, and the other two passed only because the
+    model happened to name the file the commit changed.
+
+    **Both lists are carried, because a refusal that names only the plan leaves the reader to diff
+    the commit themselves** — which is the whole work this refusal exists to save.
+    """
+
+
 class ADeliveredChange(BaseModel):
     """What was written into the clone, and what the suite said about it.
 
@@ -107,9 +131,7 @@ def apply_and_verify(
     refuse_a_change_nothing_observed(
         verification,
         plan.tests_to_add,
-        _the_suite_with_the_change_put_back(
-            clone, repository, plan, run_the_suite
-        ),
+        _the_suite_with_the_change_put_back(clone, repository, plan, run_the_suite),
     )
     if what_the_implementer_concluded is None:
         raise TheImplementerWasNeverAskedError(
@@ -149,8 +171,50 @@ def _the_suite_with_the_change_put_back(
     **A suite that cannot be run means the answer is no answer, not a green one.** A runner that
     raises has not said the change is unobserved; it has failed, and a rule that read a failure as
     a pass would be the worst kind of rule there is.
+
+    **And a plan whose files the commit does not hold is refused before the suite runs**, which
+    was four real runs and twenty minutes each: the putting back is a `git checkout` of files
+    nothing changed, which succeeds silently, so the question is put about a change that is still
+    there. See `TheCommitHoldsNoneOfTheFilesThePlanNamedError`.
     """
     the_files_the_plan_changed = list(plan.files_to_change)
+
+    def refuse_a_change_the_commit_does_not_hold() -> None:
+        """Refuse when the plan's files and the commit's files do not meet, before the suite runs.
+
+        **Asked of the commit and not of the checkout afterwards**, because the symptom is
+        indistinguishable from a real observation: a checkout of an unchanged file succeeds and
+        writes nothing, so asking afterwards would compare the change against itself and conclude
+        that nothing sees it.
+
+        **`git diff --name-only`, and one command for both halves of the refusal.** Whether the
+        plan's files are in the change is `the_files_the_plan_changed` against this list, and the
+        refusal names what the commit actually did — so the two come from a single reading rather
+        than from a second command whose answer could disagree with the first.
+        """
+        what_the_commit_changed = the_outcome_of(
+            ACommand(
+                program="git",
+                arguments=["diff", "--name-only", "HEAD~1", "HEAD"],
+                seconds_it_may_take=A_MINUTE,
+                working_directory=str(clone.path),
+            )
+        )
+        the_files_the_commit_held = [
+            a_line for a_line in what_the_commit_changed.standard_output.split("\n") if a_line
+        ]
+
+        if any(a_file in the_files_the_commit_held for a_file in the_files_the_plan_changed):
+            return
+
+        raise TheCommitHoldsNoneOfTheFilesThePlanNamedError(
+            f"the plan named {the_files_the_plan_changed} to change, and the commit changed "
+            f"{the_files_the_commit_held} — none of them. Putting those files back is a `git "
+            "checkout` that succeeds and writes nothing, so the question of whether anything "
+            "observes this change would be asked over a checkout that still holds it in full. "
+            "That is not a failing change; it is a change that is not where the plan said it "
+            "would be, and it is refused here rather than answered for."
+        )
 
     def put_the_files_back_to(revision: str) -> None:
         if not the_files_the_plan_changed:
@@ -165,6 +229,7 @@ def _the_suite_with_the_change_put_back(
         )
 
     def answering_without_the_change() -> SuiteOutcome:
+        refuse_a_change_the_commit_does_not_hold()
         put_the_files_back_to("HEAD~1")
         try:
             return run_the_suite(clone, repository)

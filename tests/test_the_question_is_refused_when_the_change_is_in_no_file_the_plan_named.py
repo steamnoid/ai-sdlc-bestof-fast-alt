@@ -135,7 +135,9 @@ def test_a_change_in_none_of_the_files_the_plan_named_is_refused_by_name(tmp_pat
     ) -> SuiteOutcome:
         """Answer, and record that it was asked at all — being asked is half of what is wrong."""
         the_suite_was_asked_about.append((clone.path / THE_FILE_THE_PLAN_NAMED).read_text())
-        return SuiteOutcome(exit_code=0, passed=True)
+        return SuiteOutcome(
+            exit_code=0, passed=True, dependencies_installed=True, output="88 passed"
+        )
 
     with pytest.raises(Exception) as it_raised:
         _answering_without_the_change(
@@ -179,7 +181,9 @@ def test_a_change_in_a_file_the_plan_named_is_still_answered(tmp_path: Path) -> 
     ) -> SuiteOutcome:
         """Read the clone as it stands while the question is being asked, and answer."""
         the_suite_was_asked_about.append((clone.path / THE_FILE_THE_PLAN_NAMED).read_text())
-        return SuiteOutcome(exit_code=0, passed=True)
+        return SuiteOutcome(
+            exit_code=0, passed=True, dependencies_installed=True, output="88 passed"
+        )
 
     the_answer = _answering_without_the_change(
         the_clone,
