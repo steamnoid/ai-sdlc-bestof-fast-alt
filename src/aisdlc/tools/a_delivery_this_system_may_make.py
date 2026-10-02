@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from aisdlc.domain.repository import Repository
 from aisdlc.graph.deliver_node import OpenThePullRequest, PushTheBranch
+from aisdlc.graph.merge_node import MergeAPullRequest
 from aisdlc.graph.suite_node import AskWhetherTheSuiteWentGreen
 from aisdlc.graph.the_delivery_of_this_run import TheDeliveryOfThisRun
 from aisdlc.tools.github_client import a_github_client, the_credential
@@ -35,6 +36,11 @@ from aisdlc.tools.github_create_pull_request import (
     open_a_pull_request,
 )
 from aisdlc.tools.github_fork_repository import the_account_we_fork_into
+from aisdlc.tools.merge_a_pull_request import (
+    APullRequestToMerge,
+    WhatTheMergeLanded,
+    merge_a_pull_request,
+)
 from aisdlc.tools.the_suite_went_green import WhatTheSuiteSaid, the_suite_went_green
 
 
@@ -54,6 +60,7 @@ def the_delivery_this_system_may_make(repository: Repository) -> TheDeliveryOfTh
         ask_whether_the_suite_went_green=_someone_who_asks_github_whether_the_suite_went_green(
             our_copy
         ),
+        merge_the_pull_request=_someone_who_merges_the_pull_request(),
     )
 
 
@@ -90,6 +97,20 @@ def _someone_who_asks_github_whether_the_suite_went_green(
         )
 
     return asking
+
+
+def _someone_who_merges_the_pull_request() -> MergeAPullRequest:
+    """Merge it with this deployment's own credential, read when the call is made.
+
+    **The credential is read here and not carried in the seam**, so a deployment that forgets it
+    finds out at the merge with a sentence naming the setting — and not after the merge has
+    already been attempted.
+    """
+
+    def merging(wanted: APullRequestToMerge) -> WhatTheMergeLanded:
+        return merge_a_pull_request(a_github_client(), wanted, the_credential())
+
+    return merging
 
 
 def _a_pull_request_opener() -> OpenThePullRequest:

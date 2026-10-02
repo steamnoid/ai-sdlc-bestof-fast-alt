@@ -24,6 +24,7 @@ from pydantic import BaseModel
 
 from aisdlc.domain.repository import Repository
 from aisdlc.graph.deliver_node import OpenThePullRequest, PushTheBranch
+from aisdlc.graph.merge_node import MergeAPullRequest
 from aisdlc.graph.suite_node import AskWhetherTheSuiteWentGreen
 
 
@@ -41,3 +42,4 @@ class TheDeliveryOfThisRun(BaseModel):
     push_the_branch: PushTheBranch
     open_the_pull_request: OpenThePullRequest
     ask_whether_the_suite_went_green: AskWhetherTheSuiteWentGreen
+    merge_the_pull_request: MergeAPullRequest

@@ -112,6 +112,10 @@ def merge_a_pull_request(
     """
     _refuse_a_merge_with_no_credential(credential)
 
+    _refuse_a_pull_request_that_cannot_be_merged(
+        _whether_github_says_it_can_be_merged(client, wanted), wanted
+    )
+
     return _the_merge_github_performed(client, wanted, credential)
 
 
