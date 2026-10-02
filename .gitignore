@@ -16,3 +16,6 @@ target/
 
 # Mój notatnik: lokalny, nigdy nie commitowany.
 MOJE-NOTATKI.md
+
+# Mój tickiecik: lokalna wersja, bogatsza od issue. Source of truth jest na GitHubie.
+TICKET-*.md
