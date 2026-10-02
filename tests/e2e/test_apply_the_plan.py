@@ -775,10 +775,12 @@ def test_the_third_question_is_asked_of_a_different_checkout_and_the_run_is_refu
         pytest.skip(
             f"this run was refused earlier, by {type(the_refusal).__name__}, so the third "
             f"question was never put: {the_refusal}. The model declined to write every file the "
-            "plan named, which is the implementer's own rule firing correctly — a plan that is "
-            "not fully applied is not a plan that was applied. Everything below is about what "
-            "happens *after* a change is on the disk, so on this run there was nothing to ask "
-            "about, and asserting the suite's three answers would be asserting about two."
+            "plan named, or named a file the commit never touched — both are the implementer's "
+            "own rules firing correctly. A plan that is not fully applied is not a plan that was "
+            "applied, and a change that is in no file the plan named is a change there is nothing "
+            "to put back. Everything below is about what happens *after* a change is on the disk, "
+            "so on this run there was nothing to ask about, and asserting the suite's three "
+            "answers would be asserting about two."
         )
 
     for a_test in a_plan_naming_a_test_this_run_should_refuse.tests_to_add:
