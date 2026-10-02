@@ -75,6 +75,10 @@ from aisdlc.tools.github_clone_repository import RepositoryToClone
 from aisdlc.tools.github_create_branch import PushedBranch
 from aisdlc.tools.github_create_pull_request import AnOpenedPullRequest
 from aisdlc.tools.run_tests import SuiteOutcome
+from aisdlc.tools.the_suite_went_green import WhatTheSuiteSaid
+from aisdlc.tools.why_the_suite_may_not_be_merged import (
+    NothingHasProvedThisCommitError,
+)
 from aisdlc.verify_the_change import AnUnrunTestError
 from aisdlc.web.the_api import the_api_over
 
@@ -404,7 +408,124 @@ def test_a_run_sent_back_to_the_planner_stops_with_a_reason_and_not_a_traceback(
     )
 
 
-def _a_delivery_that_only_writes_down(clone_path: Path) -> TheDeliveryOfThisRun:
+# ---------------------------------------------------------------------------
+# A delivered run asks GitHub what proved the commit, and nothing else in the default suite
+# reaches the fact that it has to.
+# ---------------------------------------------------------------------------
+
+A_WORK_ITEM_THAT_ASKED_WHAT_PROVED_IT = "a-delivered-run-that-asked-github-what-proved-it"
+
+
+def test_a_delivered_run_asks_github_whether_anything_proved_the_commit(
+    a_repository_to_clone_into: Path, a_register_and_a_projects_root
+) -> None:
+    """The run asks before it says delivered, and the commit it is told about is the one GitHub
+    reports."""
+    _, the_projects_root = a_register_and_a_projects_root
+    os.environ["AISDLC_PROJECTS_DIR"] = str(the_projects_root)
+
+    what_was_asked: list[str] = []
+
+    def ask_whether_the_suite_went_green(the_pull_request, repository) -> WhatTheSuiteSaid:
+        """Answer with a commit and a check, and keep both so a test can read what was asked."""
+        what_was_asked.append(f"{repository.address}#{the_pull_request.number}")
+        return WhatTheSuiteSaid(head_commit="b" * 40, which_checks_went_green=["the_gate"])
+
+    working_agents = _the_agents_no_model_would_produce()
+    the_graph = the_lifecycle(
+        agents=TheAgentsThisRun(**working_agents.__dict__),
+        delivery=_a_delivery_that_only_writes_down(
+            a_repository_to_clone_into, ask_whether_the_suite_went_green
+        ),
+        plan_the_clone=_cloning_from_a_local_repository(a_repository_to_clone_into),
+    )
+
+    the_work_item = a_work_item_commissioned_for_an_agent(
+        work_item_id=A_WORK_ITEM_THAT_ASKED_WHAT_PROVED_IT,
+        repository=Repository(owner="an", name="owner"),
+        accountable_role=Role.DEV,
+        commissioned_by="a person reading a test",
+        requested=a_request_about("add a health endpoint", ""),
+    )
+    with holding_the_register() as register:
+        the_work_item_a_commission_registers(register, the_work_item)
+
+    _walk_the_run_to_the_end(the_graph, the_work_item, the_projects_root, [])
+
+    assert what_was_asked == ["an/owner#1"], (
+        f"a delivered run asked about {what_was_asked} and asked about nothing at all in the run "
+        "that reached DONE. Every one of the card's column, the summary and the work item's stage "
+        "is written from this system's belief about what happened, so a run that never read "
+        "GitHub's answer is making that belief into a record"
+    )
+
+    with holding_the_register() as register:
+        where_the_register_holds = the_work_item_registered_at(
+            register, the_work_item.work_item_id
+        ).stage
+
+    assert where_the_register_holds is Stage.DONE, (
+        f"the run asked GitHub what proved its commit and ended at {where_the_register_holds.name} "
+        "rather than DONE, so asking the question is stopping the run"
+    )
+
+
+def test_a_run_whose_commit_nothing_proved_does_not_say_it_delivered(
+    a_repository_to_clone_into: Path, a_register_and_a_projects_root
+) -> None:
+    """The refusal keeps the run out of `DONE`, because `DONE` is a claim about GitHub.
+
+    **This is the other half and it is the one a caller with the tool alone would miss.** A node
+    that catches the refusal and carries on would deliver on the strength of nothing, and the
+    refusal would appear in a log nobody reads.
+    """
+    _, the_projects_root = a_register_and_a_projects_root
+    os.environ["AISDLC_PROJECTS_DIR"] = str(the_projects_root)
+
+    def ask_whether_the_suite_went_green(the_pull_request, repository) -> WhatTheSuiteSaid:
+        raise NothingHasProvedThisCommitError(
+            "no check has ever run on bbbb, so nothing has been proved about the commit about to "
+            "be merged"
+        )
+
+    working_agents = _the_agents_no_model_would_produce()
+    the_graph = the_lifecycle(
+        agents=TheAgentsThisRun(**working_agents.__dict__),
+        delivery=_a_delivery_that_only_writes_down(
+            a_repository_to_clone_into, ask_whether_the_suite_went_green
+        ),
+        plan_the_clone=_cloning_from_a_local_repository(a_repository_to_clone_into),
+    )
+
+    the_work_item = a_work_item_commissioned_for_an_agent(
+        work_item_id="a-delivery-nothing-proved",
+        repository=Repository(owner="an", name="owner"),
+        accountable_role=Role.DEV,
+        commissioned_by="a person reading a test",
+        requested=a_request_about("add a health endpoint", ""),
+    )
+    with holding_the_register() as register:
+        the_work_item_a_commission_registers(register, the_work_item)
+
+    with pytest.raises(NothingHasProvedThisCommitError):
+        _walk_the_run_to_the_end(the_graph, the_work_item, the_projects_root, [])
+
+    with holding_the_register() as register:
+        where_the_register_holds = the_work_item_registered_at(
+            register, the_work_item.work_item_id
+        ).stage
+
+    assert where_the_register_holds is not Stage.DONE, (
+        f"nothing proved the commit about to be merged and the run still recorded "
+        f"{where_the_register_holds.name}. `DONE` is a claim about GitHub's own record of "
+        "`DONE` is a claim about GitHub's own record of a commit, and a run that never read that "
+        "a commit, and a run that never read that record cannot make it"
+    )
+
+
+def _a_delivery_that_only_writes_down(
+    clone_path: Path, ask_whether_the_suite_went_green=None
+) -> TheDeliveryOfThisRun:
     """The second replacement: a delivery that reports what it would have done.
 
     **A `PushedBranch` and an `AnOpenedPullRequest` with real numbers.** The graph's delivery node
@@ -419,6 +540,14 @@ def _a_delivery_that_only_writes_down(clone_path: Path) -> TheDeliveryOfThisRun:
         ),
         open_the_pull_request=lambda what_to_open: AnOpenedPullRequest(
             number=1, address="https://example.invalid/paligakrzychu/a-project/pull/1"
+        ),
+        ask_whether_the_suite_went_green=(
+            ask_whether_the_suite_went_green
+            or (
+                lambda the_pull_request, repository: WhatTheSuiteSaid(
+                    head_commit="c" * 40, which_checks_went_green=["the_gate"]
+                )
+            )
         ),
     )
 
