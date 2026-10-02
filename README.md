@@ -783,3 +783,54 @@ never for "insufficient", always naming a specific criterion, a specific missing
 specific pair of colliding statements. A gate that refuses everything also refuses everything.
 This one refused everything *and was right every time*, and the difference is the thing that took
 twelve runs to establish.
+
+---
+
+## The plan cannot say what the change is, and the gate refused it for exactly that
+
+Run 10 got to **gate six of eight** — further than any run on this branch — and was refused on a
+plan that had no defect I had thought of:
+
+> The plan only enumerates paths: it never states the workflow step to be inserted into
+> `.github/workflows/ci.yml`, never checks that a `typecheck` script exists in `package.json`
+> (and `package.json` is absent from `files_to_change`, so an undefined script would fail CI),
+> and its single test asserts positioning after an `npm test` step whose presence in `ci.yml` the
+> plan never establishes. Before this runs, it needs the actual YAML step plus confirmation of
+> both scripts in the current workflow/package manifest.
+
+**Every clause of that is right, and every clause of it was designed in.** `ImplementationPlan`
+has exactly five fields and all five are lists of names:
+
+```text
+files_to_change   files_to_add   tests_to_add   dependencies   migrations
+```
+
+There is nowhere in the artifact to say *what* the change is. And the planner's prompt is one line
+long on this subject — `plan_the_change.py:202`:
+
+> `Plan only. Do not write, edit or suggest the contents of any file.`
+
+So a reviewer at gate six is asked to rule on **five lists of filenames and nothing else**. For a
+one-line YAML step that is not a thin plan, it is not a plan: `ci.yml` appears in `files_to_change`
+and a reviewer can learn from this artifact that the run intends to touch a workflow, and not one
+other thing about it. **The gate before code is written is a gate over a list of paths.**
+
+**And the instruction that forbids it has no test behind it.** §0.4 of this repository's own
+rules says that if a prompt has to *forbid* something, a test must *assert* it, and that prompt
+begging is not verification. I grepped for the line: it appears once, in the prompt, and nowhere
+in `tests/`. So it is not a rule anyone is keeping — it is a sentence, and the gate has just
+demonstrated that it wants the opposite of what the sentence says.
+
+**This is the runs 3 and 4 finding again, one stage later and worse.** Those runs were refused
+because `DiscoveryReport` has no field for what a repository declares about its runtime, so a
+reviewer holding the artifact cannot rule on the question. Here it is `ImplementationPlan` with
+no field for what the change is — and gate six is the one immediately before code exists. The
+precedent for this shape is recorded already: adding the field starts in
+`docs/domain-glossary.md`, not in a test.
+
+**What I did not do.** I did not widen `ImplementationPlan` on the strength of one refusal. It is
+a change to what the artifact *is*, it changes what a person approves at a gate, and the planner
+prompt forbidding contents may have been protecting something I have not measured yet — the
+implementer being *told* what to write is a different prompt from the planner being *allowed* to
+say it. That is a decision about the glossary and a cycle of its own, recorded here rather than
+taken quietly at the end of a run.
