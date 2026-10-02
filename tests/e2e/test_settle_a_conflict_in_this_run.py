@@ -197,7 +197,6 @@ def the_nodes_this_graph_registers() -> frozenset[str]:
     the_refusing = a_collaborator_nobody_asked_for
     return frozenset(
         the_lifecycle(
-            checkpoint_directory=Path("a-directory-nothing-is-written-to"),
             agents=TheAgentsThisRun(
                 discover=the_refusing,
                 propose_requirements=the_refusing,
@@ -220,6 +219,7 @@ def the_nodes_this_graph_registers() -> frozenset[str]:
             ),
             policy=None,
             plan_the_clone=the_refusing,
+            record=the_refusing,
         )
         .get_graph()
         .nodes
