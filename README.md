@@ -594,6 +594,7 @@ Stated rather than left to be discovered.
 
   | the default suite, no network and no credential | what it holds this repository to |
   |---|---|
+  | `test_the_real_tier_does_not_inherit_what_a_file_left_behind.py` | that every fixture in the real tier that changes the environment gives it back, so a file cannot inherit a setting from the file before it |
   | `test_a_run_that_stops_says_why_and_not_a_traceback.py` | that a run stopping part way through a terminal walk says why in a sentence, names the work item it stopped on, and exits with its own number rather than the test harness's |
   | `test_a_run_that_died_can_be_picked_up_again.py` | that a person can carry on a run whose process died, and that a refusal reaches a terminal as a sentence rather than as a traceback |
   | `test_an_artifact_is_one_name_from_one_set.py` | that the artifact a run presents is one name from one closed set of eight, spelled in exactly one module, and that every member has exactly one route |

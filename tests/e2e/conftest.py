@@ -93,8 +93,21 @@ def the_deployments_own_settings() -> Iterator[None]:
     credential deliberately set to an empty string stays empty instead of being refilled and
     turned into a paid call.
     """
+    # **Every variable it loaded is put back, and the shape beside it is why.** A session fixture
+    # that takes and does not return leaves every one of these in the process for every file that
+    # follows, which is how a file passes alone and fails in a suite — and a person who has seen
+    # that twice re-runs the tier until it is green. `the_real_tier_is_being_watching` below saves
+    # one variable and puts it back; this one loads an arbitrary number of them and has to do the
+    # same for each. **A fixture that yields without doing anything afterwards has still taken and
+    # not returned.**
+    what_was_already_set = dict(os.environ)
     load_dotenv(REPOSITORY_ROOT / ".env")
     yield
+
+    for a_name, a_value in what_was_already_set.items():
+        os.environ[a_name] = a_value
+    for a_name in [a_name for a_name in os.environ if a_name not in what_was_already_set]:
+        os.environ.pop(a_name, None)
 
 
 @pytest.fixture(scope="session", autouse=True)
