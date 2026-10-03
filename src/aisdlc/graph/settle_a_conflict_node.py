@@ -17,6 +17,7 @@ lives beside the answer it produces.
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable
 from pathlib import Path
 
@@ -37,6 +38,10 @@ from aisdlc.graph.merge_node import (
 from aisdlc.graph.router import THE_RUN_IS_OVER
 from aisdlc.graph.suite_node import WHERE_THE_SUITE_IS_ASKED_ABOUT
 from aisdlc.llm.asking_a_model_for import ask_a_model_for
+from aisdlc.llm.correction_budget import (
+    how_a_model_is_told_what_was_wrong,
+    may_this_run_keep_asking,
+)
 from aisdlc.llm.llm_configuration import a_configuration_from_the_environment
 from aisdlc.llm.model_factory import a_model_for
 from aisdlc.tools.rebase_the_branch_a_run_pushed import WhatTheRebaseLanded
@@ -172,16 +177,45 @@ def _the_rebase_this_run_is_asking_for(state: AgentState) -> tuple[Path, str, st
 def _the_decision_a_model_made(
     a_model: BaseChatModel, the_question: str
 ) -> WhatToDoAroundAConflict:
-    """The model's answer, validated, and a refusal that carries the answer it refused."""
-    try:
-        return WhatToDoAroundAConflict.model_validate(
-            ask_a_model_for(a_model, WhatToDoAroundAConflict).invoke(the_question)
-        )
-    except ValidationError as no_repair_was_named:
+    """The model's answer, validated, asked for again on a malformed one, and refused by name.
+
+    **A malformed answer is asked again, and that is the whole of this change.** This node invoked
+    the model once and handed whatever came back to `model_validate`, and this deployment's own
+    runs say what that costs: **the three tests in `test_settle_a_conflict_in_this_run.py` fail two
+    at a time, always the same two, and the reason in the log is the shape itself** -
+    `input_value=None`, a message the structured-output parser read as nothing. **A node that dies
+    on one malformed answer is effectively dead here**, and it dies while the run is holding an
+    open conflict, which is the one place a run most needs a second attempt.
+
+    **`how_a_model_is_told_what_was_wrong` and not the question again unchanged**, because asking
+    twice is the loop and saying why the last answer was refused is the other half. Without the
+    second half the loop is a second chance at the same question rather than a repair.
+
+    **Bounded by the shared correction budget, and the refusal survives it.** A run whose model can
+    name no repair at all delivered a merge nobody can merge, and saying so is the last useful thing
+    this node can do - so the refusal is still `AnAnswerThatIsNotADecisionError`, carrying the
+    validation error a person actually has to read.
+    """
+    began_at = time.monotonic()
+    asked_so_far = 0
+    what_was_wrong = ""
+
+    while may_this_run_keep_asking(asked_so_far, began_at):
+        asked_so_far += 1
+        try:
+            return WhatToDoAroundAConflict.model_validate(
+                ask_a_model_for(a_model, WhatToDoAroundAConflict).invoke(
+                    the_question + what_was_wrong
+                )
+            )
+        except ValidationError as no_repair_was_named:
+            what_was_wrong = how_a_model_is_told_what_was_wrong(no_repair_was_named)
+            last = no_repair_was_named
+    else:
         raise AnAnswerThatIsNotADecisionError(
-            f"the model named no repair this run could take, and said nothing for one. What it was "
-            f"given cannot be a decision:\n\n{no_repair_was_named}"
-        ) from no_repair_was_named
+            f"the model named no repair this run could take, and said nothing for one after being "
+            f"asked {asked_so_far} times. What it was given cannot be a decision:\n\n{last}"
+        ) from last
 
 
 class TheRunOpenedNoPullRequestToConflictOverError(Exception):

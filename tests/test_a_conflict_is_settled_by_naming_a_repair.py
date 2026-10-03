@@ -81,11 +81,25 @@ THE_CONFLICT_IN_GITHUBS_WORDS = (
 
 
 class _AModelThatAnswers:
-    """A model whose answers are already decided, recording every question it was asked."""
+    """A model whose answers are already decided, recording every question it was asked.
+
+    **The last answer repeats, and that is what the node's retry made necessary.** The node asks
+    again on a malformed answer, so a double that popped an empty list raised `IndexError` on the
+    second question — which is a double reporting its own exhaustion rather than the node's
+    rule. **A model that answered badly once has not been shown to answer well the next time**,
+    and these two tests are about a refusal that must survive every question.
+
+    **The last answer and not `None`, and that is the half that took a run to find.** Returning
+    `None` made the *final* error say *the model returned nothing*, which is true and useless: the
+    first error said which field was empty, and the refusal is read by whoever has to fix the model.
+    **A double that answers a different wrong thing on the retry is not repeating a model, it is
+    inventing one.**
+    """
 
     def __init__(self, what_it_answers: list[object]) -> None:
-        self._what_it_answers = what_it_answers
+        self._what_it_answers = list(what_it_answers)
         self.what_it_was_asked: list[str] = []
+        self._the_answer_it_gave_last: object = None
 
     def with_structured_output(self, *arguments: object, **keywords: object) -> object:
         """LangChain's entry point, and the answers are decided, so this is already the model."""
@@ -93,7 +107,9 @@ class _AModelThatAnswers:
 
     def invoke(self, the_question: str) -> object:
         self.what_it_was_asked.append(the_question)
-        return self._what_it_answers.pop(0)
+        if self._what_it_answers:
+            self._the_answer_it_gave_last = self._what_it_answers.pop(0)
+        return self._the_answer_it_gave_last
 
 
 def _the_state_a_conflict_reaches_the_run_in() -> AgentState:
