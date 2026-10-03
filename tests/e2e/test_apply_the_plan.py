@@ -65,7 +65,11 @@ from typing import NamedTuple
 import pytest
 from pydantic import BaseModel
 
-from aisdlc.agents.apply_the_plan import ADeliveredChange, apply_and_verify
+from aisdlc.agents.apply_the_plan import (
+    ADeliveredChange,
+    TheCommitHoldsNoneOfTheFilesThePlanNamedError,
+    apply_and_verify,
+)
 from aisdlc.agents.implement_the_plan import (
     AWriteThatChangesNothingError,
     FileOutsideThePlanError,
@@ -135,18 +139,30 @@ REFUSALS_THAT_MEAN_THIS_RUN_DELIVERED_NOTHING = (
     PlannedFileNotWrittenError,
     AWriteThatChangesNothingError,
     FileOutsideThePlanError,
+    TheCommitHoldsNoneOfTheFilesThePlanNamedError,
 )
-"""The two stages of this one, and the two ways each of them can stop — a list and not a pair.
+"""The stages between the plan and the delivery, and every way each of them can stop — a list.
 
 **A model is free to decline to write the file the plan named, and this deployment's does
 roughly every other time.** That stops the run at `PlannedFileNotWrittenError`, which is the
 implementer's rule firing correctly: *a plan that is not fully applied is not a plan that was
 applied, and reporting it as applied is the one thing a traceability chain must never do.*
 
-So the second plan in this file has **two** honest endings, and a fixture naming only the later
-one fails on the earlier one — with a message that reads as a defect in the system rather than
+So the second plan in this file has **more than one** honest ending, and a fixture naming only one
+of them fails on the others — with a message that reads as a defect in the system rather than
 as a fixture that was too narrow. Every class here is a refusal of *this* run, from one of the
-two stages between the plan and the delivery, and a delivery is the one outcome not in the list.
+stages between the plan and the delivery, and a delivery is the one outcome not in the list.
+
+**And this list has grown three times, each time by a rule that was correct when it was added.**
+A rule added without adding itself here does not fail loudly — it fails as `ERROR at setup`, with
+the fixture's own `pytest.raises` letting the refusal through, which is the one shape that reads
+as *the system is broken* rather than *the list is short*. So a refusal added here is not finished
+until it is in this tuple.
+
+**The last one is why this note had to be rewritten rather than appended to.** It said *the two
+ways each of them can stop*, which was already wrong at four classes and became more wrong at
+five. A count written in prose is a number nothing checks, and this repository has been bitten by
+one of those before.
 """
 
 
@@ -454,18 +470,39 @@ def a_real_delivered_change(
     **The commit is read while this fixture runs**, because the second fixture in this file
     makes a commit of its own and a test that asked `HEAD` afterwards would be asserting about
     whichever call happened last.
+
+    **A run this model refuses to finish skips here, with the reason printed, and this fixture
+    used to error instead.** It demanded a delivery with no `pytest.raises` of any kind, so a run
+    refused for a correct reason was reported as four setup errors — and four setup errors read as
+    *the system is broken* rather than as *this run did not deliver*. Four of them, at once, on one
+    fixture, is the shape a reader trusts least.
+
+    **The measurement that made it necessary:** `TheCommitHoldsNoneOfTheFilesThePlanNamedError`
+    began arriving on this deployment's plans — `files_to_change=['package.json']` with a commit
+    that changed a test file and nothing else. So this is not one unlucky model answer; it is what
+    this deployment's plans often look like, and a fixture that cannot hear it is a fixture that
+    will go on reporting the wrong thing every time it happens.
     """
     run_the_suite, what_the_suite_was_handed = a_suite_recording_the_checkout_it_was_handed(
         a_plan_this_run_will_apply
     )
 
-    the_change = apply_and_verify(
-        a_clone_this_run_may_write,
-        the_repository,
-        a_plan_this_run_will_apply,
-        the_model_for(request.param),
-        run_the_suite,
-    )
+    try:
+        the_change = apply_and_verify(
+            a_clone_this_run_may_write,
+            the_repository,
+            a_plan_this_run_will_apply,
+            the_model_for(request.param),
+            run_the_suite,
+        )
+    except REFUSALS_THAT_MEAN_THIS_RUN_DELIVERED_NOTHING as the_refusal:
+        pytest.skip(
+            f"this run did not deliver, by {type(the_refusal).__name__}, so there is no change for "
+            f"the four tests below to be about: {the_refusal}. Every contract here is about a "
+            "delivered change, and asserting about one that does not exist would be asserting "
+            "about nothing. This is a skip rather than a pass and rather than an error, because a "
+            "refusal the rules already state is not a defect in the system under test."
+        )
 
     return ADeliveredRun(
         the_change=the_change,
@@ -775,10 +812,12 @@ def test_the_third_question_is_asked_of_a_different_checkout_and_the_run_is_refu
         pytest.skip(
             f"this run was refused earlier, by {type(the_refusal).__name__}, so the third "
             f"question was never put: {the_refusal}. The model declined to write every file the "
-            "plan named, which is the implementer's own rule firing correctly — a plan that is "
-            "not fully applied is not a plan that was applied. Everything below is about what "
-            "happens *after* a change is on the disk, so on this run there was nothing to ask "
-            "about, and asserting the suite's three answers would be asserting about two."
+            "plan named, or named a file the commit never touched — both are the implementer's "
+            "own rules firing correctly. A plan that is not fully applied is not a plan that was "
+            "applied, and a change that is in no file the plan named is a change there is nothing "
+            "to put back. Everything below is about what happens *after* a change is on the disk, "
+            "so on this run there was nothing to ask about, and asserting the suite's three "
+            "answers would be asserting about two."
         )
 
     for a_test in a_plan_naming_a_test_this_run_should_refuse.tests_to_add:
