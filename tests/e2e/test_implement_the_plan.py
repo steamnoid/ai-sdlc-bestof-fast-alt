@@ -38,6 +38,7 @@ from aisdlc.agents.implement_the_plan import (
     AWriteThatChangesNothingError,
     FileOutsideThePlanError,
     FileToWrite,
+    FileWrittenTwiceError,
     PlannedFileNotWrittenError,
     WhatTheImplementerConcluded,
     implement_the_plan,
@@ -286,6 +287,7 @@ def a_real_change(
         PlannedFileNotWrittenError,
         FileOutsideThePlanError,
         AWriteThatChangesNothingError,
+        FileWrittenTwiceError,
     ) as the_refusal:
         pytest.skip(
             f"this run implemented nothing, by {type(the_refusal).__name__}, so there is no change "
