@@ -177,8 +177,7 @@ def the_prompt_to_implement(
     read.
     """
     what_there_is_now = "\n\n".join(
-        f"--- {path} ---\n"
-        f"{read_file_in_the_project(a_path_in_the_project(clone.path, path)).text}"
+        f"--- {path} ---\n{read_file_in_the_project(a_path_in_the_project(clone.path, path)).text}"
         for path in plan.files_to_change
     )
 
@@ -200,7 +199,6 @@ def the_prompt_to_implement(
         + _no_correction_on_the_first_question(what_was_wrong)
         + the_rule_about_naming_a_file()
     )
-
 
 
 def implement_the_plan(
@@ -256,8 +254,12 @@ def implement_the_plan(
         raise last
 
     moved = _which_files_the_answer_actually_moved(clone, answer.files)
-    if not moved:
-        raise AWriteThatChangesNothingError([write.path for write in answer.files])
+    the_files_the_plan_would_change = [*plan.files_to_change, *plan.files_to_add]
+    nothing_the_plan_was_for_moved = not any(
+        a_path in moved for a_path in the_files_the_plan_would_change
+    )
+    if not moved or (the_files_the_plan_would_change and nothing_the_plan_was_for_moved):
+        raise AWriteThatChangesNothingError(the_files_the_plan_would_change or moved)
 
     for write in answer.files:
         where = the_path_inside_the_project(a_path_in_the_project(clone.path, write.path))
@@ -302,15 +304,23 @@ class AWriteThatChangesNothingError(Exception):
     """
 
     def __init__(self, the_paths: list[str]) -> None:
-        """Name every path, because "nothing changed" is a claim somebody has to check."""
+        """Name the paths that were left as they were found, because somebody has to go and look.
+
+        **The wording is about what the plan named to change or add, and not about every file in
+        the answer.** A real run answered with `package.json` and a test, wrote `package.json`
+        byte-identically, and wrote the test; the old sentence said *every file this plan named
+        already had the content proposed for it*, which named the test and was false about it. **A
+        refusal that names the one file that was fine sends the reader to the wrong file**, and
+        this one was reported four times in six real-tier runs before anybody read what it meant.
+        """
         self.the_paths = the_paths
         super().__init__(
-            f"Every file this plan named already had exactly the content proposed for it: "
-            f"{', '.join(the_paths)}. The suite was run and a change was verified, and there is "
-            f"no difference between this run and one that did nothing -- a pull request whose "
-            f"diff is empty is the one thing this pipeline must never produce. Either the plan "
-            f"asks for something the repository already has, or the model rewrote a file without "
-            f"changing it."
+            f"None of the files this plan named to change or to add held content different from "
+            f"what the repository already had: {', '.join(the_paths)}. The suite was run and a "
+            f"change was verified, and there is no difference between this run and one that did "
+            f"nothing -- a pull request whose diff is empty is the one thing this pipeline must "
+            f"never produce. Either the plan asks for something the repository already has, or the "
+            f"model rewrote a file without changing it."
         )
 
 
@@ -355,9 +365,7 @@ def _every_file_the_plan_named_was_written(
     still read as complete.
     """
     written_paths = [write.path for write in written]
-    missing = [
-        path for path in the_paths_the_plan_names(plan) if path not in written_paths
-    ]
+    missing = [path for path in the_paths_the_plan_names(plan) if path not in written_paths]
 
     if missing:
         raise PlannedFileNotWrittenError(
