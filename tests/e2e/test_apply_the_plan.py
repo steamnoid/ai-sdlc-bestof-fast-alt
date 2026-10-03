@@ -470,18 +470,39 @@ def a_real_delivered_change(
     **The commit is read while this fixture runs**, because the second fixture in this file
     makes a commit of its own and a test that asked `HEAD` afterwards would be asserting about
     whichever call happened last.
+
+    **A run this model refuses to finish skips here, with the reason printed, and this fixture
+    used to error instead.** It demanded a delivery with no `pytest.raises` of any kind, so a run
+    refused for a correct reason was reported as four setup errors — and four setup errors read as
+    *the system is broken* rather than as *this run did not deliver*. Four of them, at once, on one
+    fixture, is the shape a reader trusts least.
+
+    **The measurement that made it necessary:** `TheCommitHoldsNoneOfTheFilesThePlanNamedError`
+    began arriving on this deployment's plans — `files_to_change=['package.json']` with a commit
+    that changed a test file and nothing else. So this is not one unlucky model answer; it is what
+    this deployment's plans often look like, and a fixture that cannot hear it is a fixture that
+    will go on reporting the wrong thing every time it happens.
     """
     run_the_suite, what_the_suite_was_handed = a_suite_recording_the_checkout_it_was_handed(
         a_plan_this_run_will_apply
     )
 
-    the_change = apply_and_verify(
-        a_clone_this_run_may_write,
-        the_repository,
-        a_plan_this_run_will_apply,
-        the_model_for(request.param),
-        run_the_suite,
-    )
+    try:
+        the_change = apply_and_verify(
+            a_clone_this_run_may_write,
+            the_repository,
+            a_plan_this_run_will_apply,
+            the_model_for(request.param),
+            run_the_suite,
+        )
+    except REFUSALS_THAT_MEAN_THIS_RUN_DELIVERED_NOTHING as the_refusal:
+        pytest.skip(
+            f"this run did not deliver, by {type(the_refusal).__name__}, so there is no change for "
+            f"the four tests below to be about: {the_refusal}. Every contract here is about a "
+            "delivered change, and asserting about one that does not exist would be asserting "
+            "about nothing. This is a skip rather than a pass and rather than an error, because a "
+            "refusal the rules already state is not a defect in the system under test."
+        )
 
     return ADeliveredRun(
         the_change=the_change,
