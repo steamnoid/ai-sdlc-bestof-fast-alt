@@ -38,9 +38,13 @@ the guard is asked of the commit, not of the checkout's afterwards.
 would let me assert that a comparison happened; what has to be shown is that `git` itself calls two
 checkouts identical, which is the whole claim.
 
-**This file asserts a refusal and what it says, and not a class.** The named error arrives with the
-behaviour, and a RED that would not import is a RED that failed for the wrong reason — so the
-demand here is the one a reader of a traceback has, which is what the sentence tells them.
+**This file asserted a refusal and what it says, but did not name the class — which is a test that
+passes on the wrong exception.** The named error arrived with the behaviour in the same cycle, so
+`pytest.raises(Exception)` was the RED's shape; **it stayed that way after GREEN**, which is how a
+test ends up proving *an* exception said this rather than *this* exception said this.
+
+**Naming it now is the repair.** A refusal whose sentence is asserted and whose class is not
+named is the one place where a test can be green and mean nothing.
 """
 
 from __future__ import annotations
@@ -50,7 +54,10 @@ from pathlib import Path
 
 import pytest
 
-from aisdlc.agents.apply_the_plan import _the_suite_with_the_change_put_back
+from aisdlc.agents.apply_the_plan import (
+    TheCommitHoldsNoneOfTheFilesThePlanNamedError,
+    _the_suite_with_the_change_put_back,
+)
 from aisdlc.agents.implementation_plan import ImplementationPlan
 from aisdlc.domain.repository import Repository
 from aisdlc.tools.github_clone_repository import ClonedRepository
@@ -139,7 +146,7 @@ def test_a_change_in_none_of_the_files_the_plan_named_is_refused_by_name(tmp_pat
             exit_code=0, passed=True, dependencies_installed=True, output="88 passed"
         )
 
-    with pytest.raises(Exception) as it_raised:
+    with pytest.raises(TheCommitHoldsNoneOfTheFilesThePlanNamedError) as it_raised:
         _answering_without_the_change(
             the_clone, a_suite_that_records_being_asked, [THE_FILE_THE_PLAN_NAMED]
         )()
