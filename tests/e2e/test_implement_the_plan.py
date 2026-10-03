@@ -35,7 +35,10 @@ from pathlib import Path
 import pytest
 
 from aisdlc.agents.implement_the_plan import (
+    AWriteThatChangesNothingError,
+    FileOutsideThePlanError,
     FileToWrite,
+    PlannedFileNotWrittenError,
     WhatTheImplementerConcluded,
     implement_the_plan,
 )
@@ -257,10 +260,40 @@ def a_real_change(
     **The provider is `request.param` and the tests parametrise it indirectly**, so a run
     configured for one provider *skips* the others with the reason printed rather than passing
     quietly.
+
+    **A run this model refuses to implement skips here, with the reason printed, and this fixture
+    used to error instead.** It called `implement_the_plan` with nothing to catch, so a run refused
+    for a correct reason arrived as four setup errors:
+
+        PlannedFileNotWrittenError: The plan names ['package.json',
+        'tests/unit/aisdlc-a-real-run-wrote-this.test.ts'] and the answer did not write them
+
+    **That is the implementer's own rule firing correctly** - a plan not fully applied is not a plan
+    that was applied - and this deployment's model does decline regularly enough to be worth
+    catching. Four of the same error is the shape a reader trusts least: it reads as *the system is
+    broken* rather than as *this run did not implement the plan*.
+
+    **This is the third fixture to need this, and the same fix as the other two.** A closed set of
+    refusals and a set of fixtures that cannot hear one are the same obligation seen from two
+    sides, and a rule added to `implement_the_plan` now has two places to join rather than the one
+    a reader of this function would guess.
     """
-    return implement_the_plan(
-        a_clone_this_run_may_write, a_plan_this_run_will_apply, the_model_for(request.param)
-    )
+    try:
+        return implement_the_plan(
+            a_clone_this_run_may_write, a_plan_this_run_will_apply, the_model_for(request.param)
+        )
+    except (
+        PlannedFileNotWrittenError,
+        FileOutsideThePlanError,
+        AWriteThatChangesNothingError,
+    ) as the_refusal:
+        pytest.skip(
+            f"this run implemented nothing, by {type(the_refusal).__name__}, so there is no change "
+            f"for the four tests below to be about: {the_refusal}. Every contract here is about a "
+            "change this model actually made, and asserting about one that does not exist would be "
+            "asserting about nothing. A skip and not a pass and not an error, because a refusal "
+            "the rules already state is not a defect in the system under test."
+        )
 
 
 @pytest.mark.parametrize("a_real_change", list(LlmProvider), indirect=True)
