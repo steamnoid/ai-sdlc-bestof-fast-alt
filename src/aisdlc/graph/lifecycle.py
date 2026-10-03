@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
-
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.graph import END, START, StateGraph
@@ -564,19 +562,6 @@ def _the_implementation_stage(graph: StateGraph, apply_and_verify: ApplyAndVerif
     )
 
 
-def _recording_with(record: Record) -> Callable[[AgentState], dict]:
-    """A node that writes what the run has and changes no channel.
-
-    A named function rather than a lambda inline, because the difference from `record` is
-    the whole point of it: the collaborator writes, and a node has to return a state
-    update, and there is nothing here to update.
-    """
-
-    def writing_what_the_run_has(state: AgentState) -> dict:
-        record(state)
-        return {}
-
-    return writing_what_the_run_has
 
 
 def a_config(thread_id: str) -> dict:
