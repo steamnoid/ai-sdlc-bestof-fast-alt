@@ -68,6 +68,7 @@ from pydantic import BaseModel
 from aisdlc.agents.apply_the_plan import (
     ADeliveredChange,
     TheCommitHoldsNoneOfTheFilesThePlanNamedError,
+    TheImplementerWasNeverAskedError,
     apply_and_verify,
 )
 from aisdlc.agents.implement_the_plan import (
@@ -140,6 +141,7 @@ REFUSALS_THAT_MEAN_THIS_RUN_DELIVERED_NOTHING = (
     AWriteThatChangesNothingError,
     FileOutsideThePlanError,
     TheCommitHoldsNoneOfTheFilesThePlanNamedError,
+    TheImplementerWasNeverAskedError,
 )
 """The stages between the plan and the delivery, and every way each of them can stop — a list.
 
@@ -158,6 +160,11 @@ A rule added without adding itself here does not fail loudly — it fails as `ER
 the fixture's own `pytest.raises` letting the refusal through, which is the one shape that reads
 as *the system is broken* rather than *the list is short*. So a refusal added here is not finished
 until it is in this tuple.
+
+**`TheImplementerWasNeverAskedError` joins because it is one of this run's own refusals**, not
+because it is convenient to list everything. A run that reached it has a verification with no
+implementer behind it, so nothing was implemented and nothing may be delivered; a fixture
+that does not expect it reports a run that applied nothing as four setup errors.
 
 **The last one is why this note had to be rewritten rather than appended to.** It said *the two
 ways each of them can stop*, which was already wrong at four classes and became more wrong at
