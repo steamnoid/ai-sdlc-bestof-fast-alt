@@ -65,7 +65,11 @@ from typing import NamedTuple
 import pytest
 from pydantic import BaseModel
 
-from aisdlc.agents.apply_the_plan import ADeliveredChange, apply_and_verify
+from aisdlc.agents.apply_the_plan import (
+    ADeliveredChange,
+    TheCommitHoldsNoneOfTheFilesThePlanNamedError,
+    apply_and_verify,
+)
 from aisdlc.agents.implement_the_plan import (
     AWriteThatChangesNothingError,
     FileOutsideThePlanError,
@@ -135,18 +139,30 @@ REFUSALS_THAT_MEAN_THIS_RUN_DELIVERED_NOTHING = (
     PlannedFileNotWrittenError,
     AWriteThatChangesNothingError,
     FileOutsideThePlanError,
+    TheCommitHoldsNoneOfTheFilesThePlanNamedError,
 )
-"""The two stages of this one, and the two ways each of them can stop — a list and not a pair.
+"""The stages between the plan and the delivery, and every way each of them can stop — a list.
 
 **A model is free to decline to write the file the plan named, and this deployment's does
 roughly every other time.** That stops the run at `PlannedFileNotWrittenError`, which is the
 implementer's rule firing correctly: *a plan that is not fully applied is not a plan that was
 applied, and reporting it as applied is the one thing a traceability chain must never do.*
 
-So the second plan in this file has **two** honest endings, and a fixture naming only the later
-one fails on the earlier one — with a message that reads as a defect in the system rather than
+So the second plan in this file has **more than one** honest ending, and a fixture naming only one
+of them fails on the others — with a message that reads as a defect in the system rather than
 as a fixture that was too narrow. Every class here is a refusal of *this* run, from one of the
-two stages between the plan and the delivery, and a delivery is the one outcome not in the list.
+stages between the plan and the delivery, and a delivery is the one outcome not in the list.
+
+**And this list has grown three times, each time by a rule that was correct when it was added.**
+A rule added without adding itself here does not fail loudly — it fails as `ERROR at setup`, with
+the fixture's own `pytest.raises` letting the refusal through, which is the one shape that reads
+as *the system is broken* rather than *the list is short*. So a refusal added here is not finished
+until it is in this tuple.
+
+**The last one is why this note had to be rewritten rather than appended to.** It said *the two
+ways each of them can stop*, which was already wrong at four classes and became more wrong at
+five. A count written in prose is a number nothing checks, and this repository has been bitten by
+one of those before.
 """
 
 
