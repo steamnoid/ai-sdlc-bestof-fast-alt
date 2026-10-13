@@ -531,3 +531,125 @@ def _wait_until(what_to_read, what_to_say: str):
         time.sleep(0.1)
         waited += 0.1
     pytest.fail(f"{what_to_say}, after {HOW_LONG_A_SMOKE_MAY_WAIT_IN_SECONDS}s")
+
+
+# ---------------------------------------------------------------------------
+# The same clasp through a terminal: `aisdlc start` walks a filing's words.
+# ---------------------------------------------------------------------------
+
+
+def _a_cli_deployment(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The register file the command opens, so a filing is where the command looks.
+
+    **The file the command opens and not the fixture's own**, because `start`
+    calls `_open_the_register` before it reads anything — a filing commissioned
+    into any other file is a card on a board this command never sees.
+    """
+    from aisdlc.store.where_the_register_lives import where_the_register_should_live
+
+    monkeypatch.setenv("AISDLC_PROJECTS_DIR", str(tmp_path / "projects"))
+    monkeypatch.setenv("AISDLC_CREATIVE_MODE", "on")
+    the_register_lives_at(where_the_register_should_live())
+
+
+def _a_cli_whose_graph_is_fakes(
+    monkeypatch: pytest.MonkeyPatch, the_bare: Path, what_was_opened: list | None = None
+) -> None:
+    """Point the command at the real graph with faked agents, and leave the rest real."""
+    import aisdlc.cli as the_cli
+
+    def building_the_graph(repository: Repository, the_model: object = None) -> object:
+        return the_lifecycle(
+            agents=_the_agents_no_model_would_produce(),
+            delivery=_a_delivery_that_only_writes_down(the_bare, what_was_opened),
+            plan_the_clone=_cloning_from_a_local_repository(the_bare),
+        )
+
+    monkeypatch.setattr(the_cli, "the_graph_for", building_the_graph)
+
+
+def test_start_refuses_a_work_item_nobody_commissioned(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An unknown id ends the command with the register's sentence, not a traceback."""
+    from typer.testing import CliRunner
+
+    from aisdlc.cli import aisdlc
+
+    _a_cli_deployment(tmp_path, monkeypatch)
+
+    what_a_person_typed = CliRunner().invoke(aisdlc, ["start", "issue-1-no-such-work"])
+
+    assert what_a_person_typed.exit_code == 2
+    assert "Traceback" not in what_a_person_typed.output
+    assert "issue-1-no-such-work" in what_a_person_typed.output
+
+
+def test_start_refuses_a_work_item_that_is_past_ready(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A filing already picked up is refused, because starting it twice would push one
+    branch into one directory on one checkpoint."""
+    from typer.testing import CliRunner
+
+    from aisdlc.cli import aisdlc
+    from aisdlc.store.the_register_of_work_items import the_work_item_is_recorded_at
+
+    _a_cli_deployment(tmp_path, monkeypatch)
+
+    filing = filing_the_picks_a_person_made(
+        _a_briefing_with(_an_opportunity()), [0], _an_issue_opener_that_records()[0]
+    )
+    the_id = filing.work_item_ids[0]
+
+    with holding_the_register() as a_register:
+        the_filed = the_work_item_registered_at(a_register, the_id)
+        the_work_item_is_recorded_at(
+            a_register, the_filed, the_filed.model_copy(update={"stage": Stage.DONE})
+        )
+
+    what_a_person_typed = CliRunner().invoke(aisdlc, ["start", the_id])
+
+    assert what_a_person_typed.exit_code == 2
+    assert "only a work item at READY can be started" in what_a_person_typed.output
+
+
+def test_start_walks_a_filing_through_eight_gates_to_a_delivery(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    a_repository_to_clone_into: Path,
+) -> None:
+    """The terminal half of the loop: eight approvals on stdin, a `DONE` in the register.
+
+    **Through the command a person invokes, because the promise is in the command.**
+    The API already proves the graph delivers; what only this proves is that `start`
+    looks the filing up, walks it without rewording its request, and exits `0` with
+    the pull request's `Closes #N` on the record — the whole of what a person running
+    this in a terminal came for.
+    """
+    from typer.testing import CliRunner
+
+    from aisdlc.cli import aisdlc
+
+    _a_cli_deployment(tmp_path, monkeypatch)
+
+    what_was_opened: list[object] = []
+    _a_cli_whose_graph_is_fakes(monkeypatch, a_repository_to_clone_into, what_was_opened)
+
+    filing = filing_the_picks_a_person_made(
+        _a_briefing_with(_an_opportunity()), [0], _an_issue_opener_that_records()[0]
+    )
+    the_id = filing.work_item_ids[0]
+
+    approvals = "\n".join(["y", "pikuniu", "it answers the filing"] * 8) + "\n"
+    what_a_person_typed = CliRunner().invoke(aisdlc, ["start", the_id], input=approvals)
+
+    assert what_a_person_typed.exit_code == 0, what_a_person_typed.output
+    assert "Traceback" not in what_a_person_typed.output
+
+    with holding_the_register() as a_register:
+        assert the_work_item_registered_at(a_register, the_id).stage is Stage.DONE
+
+    assert what_was_opened and "Closes #42" in str(what_was_opened[0]), (
+        "the terminal walk delivered nothing whose body closes the issue it answers"
+    )

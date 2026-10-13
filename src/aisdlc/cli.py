@@ -153,6 +153,9 @@ def start_a_filing(
     past `READY`, is refused with the register's own sentence.
     """
     from aisdlc.domain.stage import Stage
+    from aisdlc.store.the_register_of_work_items import (
+        NoSuchWorkItemError as NoSuchRegisteredWorkItemError,
+    )
     from aisdlc.store.the_register_of_work_items import the_work_item_registered_at
     from aisdlc.store.where_the_register_lives import holding_the_register
 
@@ -162,7 +165,7 @@ def start_a_filing(
     with holding_the_register() as the_register:
         try:
             the_work_item = the_work_item_registered_at(the_register, work_item_id)
-        except NoSuchWorkItemError as nothing_to_start:
+        except NoSuchRegisteredWorkItemError as nothing_to_start:
             typer.echo(f"{work_item_id} cannot be started: {nothing_to_start}")
             raise typer.Exit(code=2) from None
         if the_work_item.stage is not Stage.READY:
