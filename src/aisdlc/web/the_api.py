@@ -69,7 +69,10 @@ from aisdlc.store.the_record_of_a_run import (
     the_notes_on_the_card,
     what_the_gate_was_asking_about,
 )
-from aisdlc.store.the_register_of_work_items import the_work_item_registered_at
+from aisdlc.store.the_register_of_work_items import (
+    NoSuchWorkItemError,
+    the_work_item_registered_at,
+)
 from aisdlc.store.what_a_run_records import something_the_run_said
 from aisdlc.store.where_the_register_lives import (
     holding_the_register,
@@ -588,7 +591,7 @@ def the_api_over(
                 the_work_item = the_work_item_registered_at(
                     a_register, asked_for.work_item_id
                 )
-            except Exception as nobody_commissioned_it:
+            except NoSuchWorkItemError as nobody_commissioned_it:
                 raise HTTPException(
                     status_code=404, detail=str(nobody_commissioned_it)
                 ) from nobody_commissioned_it
