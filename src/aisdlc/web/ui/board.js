@@ -152,10 +152,13 @@ async function fileThePicks(theBriefing, theButton) {
     return;
   }
 
-  // **The count, and what it means.** A person who ticked three and sees "2 of 3 filed" is being
+  // **The count, what it means, and what to do next.** A person who ticked three and sees "2 of 3 filed" is being
   // told a fact; one who sees "3 opportunities" is being told nothing about what happened.
+  // And a filing is a work item at `READY`, which walks nothing by itself — so the sentence
+  // names the gesture that starts one, because a card that appeared with no way to start it
+  // reads as a run that is stuck rather than one that was never asked to walk.
   const filed = await answer.json();
-  theButton.textContent = `${filed.how_many_became_filings} filed — they are on the board now`;
+  theButton.textContent = `${filed.how_many_became_filings} filed — open a card on the board to start it`;
   refresh();
 }
 
@@ -354,6 +357,7 @@ function drawTheStoryOf(aRun) {
   if (whereItIs) theStoryBody.append(whereItIs);
 
   theStoryBody.append(theGateToAnswerIn(aRun));
+  theStoryBody.append(theRunToStartIn(aRun));
   theStoryBody.append(theChainOfGatesIn(aRun));
 
   if (aRun.notes.length) {
@@ -551,8 +555,56 @@ function theGateToAnswerIn(aRun) {
   return thePanel;
 }
 
-function anInputIn(whatItIs, theName, isLonger = false) {
-  // Returns the *field*, not the input and not the label, and that is deliberate: the first
+// **The gesture a filing is missing.** A briefing files an issue and commissions a work item
+// at `READY`, which walks nothing by itself — and a card with no question, no gates and no
+// thread behind it is otherwise indistinguishable from a run that is stuck. So a card in
+// exactly that shape offers one button, which starts the run the filing commissioned without
+// rewording its request. A sentence-led run never shows it: its thread is walking from the
+// moment its card exists, so `is_still_working` is what tells the two apart.
+function theRunToStartIn(aRun) {
+  const nothingToStart =
+    aRun.card.stage !== "READY" ||
+    aRun.the_question !== null ||
+    aRun.gates.length !== 0 ||
+    aRun.is_still_working;
+  if (nothingToStart) return document.createElement("div");
+
+  const thePanel = document.createElement("div");
+  thePanel.className = "the-gate-to-answer";
+
+  const theHeading = document.createElement("h3");
+  theHeading.textContent = "this filing has not started yet";
+  thePanel.append(theHeading);
+
+  const whatItIs = document.createElement("p");
+  whatItIs.textContent =
+    "A briefing filed this as an issue and put its words on this card. Starting it walks the same eight gates a typed request walks, beginning with its own discovery.";
+  thePanel.append(whatItIs);
+
+  const start = aButtonIn("approve", "Start this run");
+  start.disabled = false;
+  start.addEventListener("click", async () => {
+    start.disabled = true;
+    const answer = await fetch("/api/runs/from-work-item", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ work_item_id: aRun.card.work_item_id }),
+    });
+    if (!answer.ok) {
+      const why = await answer.json().catch(() => ({ detail: "the server did not say why" }));
+      window.alert(why.detail ?? "the run did not start");
+      start.disabled = false;
+      return;
+    }
+    await refresh();
+    await openTheStoryOf(aRun.card.work_item_id);
+  });
+  thePanel.append(start);
+
+  return thePanel;
+}
+
+function anInputIn(whatItIs, theName, isLonger = false) {  // Returns the *field*, not the input and not the label, and that is deliberate: the first
   // version returned the label, so every caller that asked it for `.value` read `undefined`
   // and the gate panel's buttons stayed disabled with nothing on screen to say why. A caller
   // gets the thing it puts on the page and asks the page for the input.

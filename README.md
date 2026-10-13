@@ -273,6 +273,13 @@ which became tickets without anybody choosing would be a backlog this system inv
 idempotent against the opportunity's own words, because a briefing retried because its answer was
 slow is a briefing retried for a reason that happens.
 
+**A pick the person chose is a work item at `READY`, and it walks nothing by itself.**
+Its card offers one button — start this run — which is `POST /api/runs/from-work-item`
+from the board and `aisdlc start <work_item_id>` from a terminal. The run inherits
+the opportunity's words and does its own discovery, through the same eight gates a
+typed request walks. A delivery for a filing carries `Closes #N`, so the merge closes
+the issue the briefing opened.
+
 **And what a real briefing found, twice, about the same model on the same repository:**
 
 | | first briefing | after the paths were listed |
@@ -621,6 +628,7 @@ Stated rather than left to be discovered.
   | `test_what_two_real_runs_found.py` | the defects two real runs found, and the inspections that carry the code now |
   | `test_the_supervisor_deciding_what_to_repeat.py` | every refusal routes to the supervisor, and no node chooses a destination *and* carries an edge |
   | `test_a_repository_briefing_itself.py` | a repository briefs itself, and filing is refused without a credential |
+  | `test_a_filing_becomes_a_run_that_delivers.py` | that a filing becomes a run without its request being reworded, that a second start is refused, and that its pull request closes the issue it answers |
   | `test_the_tag_this_system_leaves_on_what_it_writes.py` | every issue and pull request carries the project's full name, or still goes out untagged |
   | `test_whether_anything_observed_the_change.py` | the rule that catches a change nothing observed, and its one gap |
   | `test_a_real_model_judging_a_real_refusal.py` | a real model's judgement inside a real graph; skips loudly without a credential |

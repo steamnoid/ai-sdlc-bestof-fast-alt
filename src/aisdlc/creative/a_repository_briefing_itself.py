@@ -314,6 +314,7 @@ def filing_the_picks_a_person_made(
         what_this_repository_is=briefing.what_this_repository_is,
         how_many_opportunities_were_found=len(briefing.opportunities),
         how_many_became_filings=len(the_work_item_ids),
+        work_item_ids=the_work_item_ids,
     )
 
 

@@ -69,7 +69,10 @@ from aisdlc.store.the_record_of_a_run import (
     the_notes_on_the_card,
     what_the_gate_was_asking_about,
 )
-from aisdlc.store.the_register_of_work_items import the_work_item_registered_at
+from aisdlc.store.the_register_of_work_items import (
+    NoSuchWorkItemError,
+    the_work_item_registered_at,
+)
 from aisdlc.store.what_a_run_records import something_the_run_said
 from aisdlc.store.where_the_register_lives import (
     holding_the_register,
@@ -151,6 +154,31 @@ class ARequestSomebodyMade(BaseModel):
             raise ValueError(
                 "a run needs a repository and a sentence saying what should change. A blank one "
                 "names nothing, and a run handed nothing still produces artifacts"
+            )
+        return written.strip()
+
+
+class AStartSomebodyAskedFor(BaseModel):
+    """A work item already on the board, by the id the register holds it under.
+
+    **An id and not a sentence, because the sentence is already on the work item.**
+    A filing commissioned its work item with the opportunity's own words, and a second
+    sentence beside it would be a second request able to disagree with the first —
+    with the one a person read on the board not being the one the run works on.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    work_item_id: str
+
+    @field_validator("work_item_id")
+    @classmethod
+    def _refuse_a_blank(cls, written: str) -> str:
+        """Refuse a blank before anything looks it up."""
+        if not written.strip():
+            raise ValueError(
+                "a run from a filing needs the work item id the filing made. "
+                "A blank one names nothing on the board"
             )
         return written.strip()
 
@@ -535,7 +563,59 @@ def the_api_over(
             "briefing_id": the_filing.briefing_id,
             "how_many_were_found": the_filing.how_many_opportunities_were_found,
             "how_many_became_filings": the_filing.how_many_became_filings,
+            "work_item_ids": the_filing.work_item_ids,
             "repository": the_filing.repository.address,
+        }
+
+    @the_app.post("/api/runs/from-work-item")
+    def a_run_from_a_filing_was_asked_for(
+        asked_for: AStartSomebodyAskedFor,
+    ) -> dict[str, object]:
+        """Start the run a filing commissioned, without rewording its request.
+
+        **This is the clasp between the two halves of the product.** A briefing files
+        an issue and commissions a work item at `READY`; this looks that work item up
+        and starts walking it. The run then does its own discovery — it inherits the
+        opportunity's words as its request and nothing else, because a run inheriting
+        its predecessor's analysis is a run whose analysis was never checked by a gate.
+
+        **Refused when the work item is not there, or not at `READY`.** A run started
+        twice would push a branch the first one created, into a directory holding the
+        first one's artifacts; a run started from mid-pipeline would skip the gates
+        that make a delivery legitimate.
+        """
+        from aisdlc.domain.stage import Stage
+
+        with holding_the_register() as a_register:
+            try:
+                the_work_item = the_work_item_registered_at(
+                    a_register, asked_for.work_item_id
+                )
+            except NoSuchWorkItemError as nobody_commissioned_it:
+                raise HTTPException(
+                    status_code=404, detail=str(nobody_commissioned_it)
+                ) from nobody_commissioned_it
+            if the_work_item.stage is not Stage.READY:
+                raise HTTPException(
+                    status_code=409,
+                    detail=(
+                        f"{the_work_item.work_item_id} is at "
+                        f"{the_work_item.stage.name}, and only a work item at READY "
+                        "can be started — this one has already been picked up or "
+                        "delivered"
+                    ),
+                )
+
+        try:
+            the_runs.a_run_was_started(the_work_item, where_projects_live())
+        except AWorkItemIsAlreadyBeingHeldError as already_running:
+            raise HTTPException(status_code=409, detail=str(already_running)) from already_running
+        except ThisRunCannotBeAssembledError as cannot:
+            raise HTTPException(status_code=503, detail=str(cannot)) from cannot
+
+        return {
+            "work_item_id": the_work_item.work_item_id,
+            "repository": the_work_item.repository.address,
         }
 
     @the_app.get("/api/runs/{work_item_id}/events")
