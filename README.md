@@ -273,6 +273,13 @@ which became tickets without anybody choosing would be a backlog this system inv
 idempotent against the opportunity's own words, because a briefing retried because its answer was
 slow is a briefing retried for a reason that happens.
 
+**A pick the person chose is a work item at `READY`, and it walks nothing by itself.**
+Its card offers one button — start this run — which is `POST /api/runs/from-work-item`
+from the board and `aisdlc start <work_item_id>` from a terminal. The run inherits
+the opportunity's words and does its own discovery, through the same eight gates a
+typed request walks. A delivery for a filing carries `Closes #N`, so the merge closes
+the issue the briefing opened.
+
 **And what a real briefing found, twice, about the same model on the same repository:**
 
 | | first briefing | after the paths were listed |
