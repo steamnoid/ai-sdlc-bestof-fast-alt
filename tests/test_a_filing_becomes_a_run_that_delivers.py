@@ -688,3 +688,54 @@ def test_a_filing_that_never_walked_can_be_resumed_at_the_beginning(
         "a run that produced nothing resumes where a fresh run begins — presenting "
         "anything else would put a document in front of a person a second time"
     )
+
+
+def test_the_picks_call_answers_with_the_work_item_ids_it_filed(
+    a_register_and_a_projects_root,
+    creative_mode_on: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The board files without reading ids, but the answer carries them anyway.
+
+    **The endpoint's response is a contract, not a convenience.** `fileThePicks`
+    reads `how_many_became_filings` today and would read `work_item_ids` the day
+    the board starts a filing without going through a card — and a response that
+    stopped carrying either would break the one reader silently, because the board
+    shows a sentence either way.
+    """
+    import aisdlc.web.the_api as the_api_over_module
+
+    _, the_projects_root = a_register_and_a_projects_root
+    os.environ["AISDLC_PROJECTS_DIR"] = str(the_projects_root)
+
+    the_briefing = _a_briefing_with(_an_opportunity())
+    monkeypatch.setitem(
+        the_api_over_module._the_briefings, the_briefing.briefing_id, the_briefing
+    )
+
+    the_opener, _ = _an_issue_opener_that_records()
+    monkeypatch.setattr(
+        the_api_over_module,
+        "the_issue_opener_this_deployment_has",
+        lambda: the_opener,
+    )
+
+    the_runs = TheRunsThisProcessIsHolding()
+    with TestClient(the_api_over(_the_open_register(), the_runs)) as the_board:
+        filed = the_board.post(
+            f"/api/briefings/{the_briefing.briefing_id}/picks", json={"which": [0]}
+        )
+
+    assert filed.status_code == 200, filed.text
+    the_answer = filed.json()
+    assert the_answer["how_many_became_filings"] == 1
+    assert len(the_answer["work_item_ids"]) == 1, (
+        "one filing, so one id — a picks call answering a count and no id leaves "
+        "every future reader that wants to start what was filed with nothing to name"
+    )
+
+    with holding_the_register() as a_register:
+        assert (
+            the_work_item_registered_at(a_register, the_answer["work_item_ids"][0]).stage
+            is Stage.READY
+        )
