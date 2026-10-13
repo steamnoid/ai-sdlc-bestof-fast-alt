@@ -139,6 +139,61 @@ def run(
     )
 
 
+@aisdlc.command(name="start")
+def start_a_filing(
+    work_item_id: str = typer.Argument(
+        ..., help="The filed work item to walk, as the board names it."
+    ),
+) -> None:
+    """Walk a work item a briefing filed, without rewording its request.
+
+    **The terminal half of `POST /api/runs/from-work-item`.** The filing commissioned
+    the work item with the opportunity's own words; this looks it up at `READY` and
+    walks the same eight gates a sentence-led run walks. A run started twice, or from
+    past `READY`, is refused with the register's own sentence.
+    """
+    from aisdlc.domain.stage import Stage
+    from aisdlc.store.the_register_of_work_items import the_work_item_registered_at
+    from aisdlc.store.where_the_register_lives import holding_the_register
+
+    _open_the_register()
+    the_projects_root = where_projects_live()
+
+    with holding_the_register() as the_register:
+        try:
+            the_work_item = the_work_item_registered_at(the_register, work_item_id)
+        except NoSuchWorkItemError as nothing_to_start:
+            typer.echo(f"{work_item_id} cannot be started: {nothing_to_start}")
+            raise typer.Exit(code=2) from None
+        if the_work_item.stage is not Stage.READY:
+            typer.echo(
+                f"{work_item_id} is at {the_work_item.stage.name}, and only a work item "
+                "at READY can be started — this one has already been picked up or delivered"
+            )
+            raise typer.Exit(code=2)
+
+    try:
+        the_graph = the_graph_for(the_work_item.repository)
+    except ThisRunCannotBeAssembledError as cannot:
+        typer.echo(f"this run cannot start: {cannot}")
+        raise typer.Exit(code=2) from None
+
+    the_project_directory = the_project_directory_of(the_work_item, the_projects_root)
+
+    typer.echo(f"{work_item_id} · {the_work_item.repository.address}")
+    typer.echo(f"everything this run writes goes in {the_project_directory}")
+    typer.echo("")
+
+    _walk(
+        the_graph,
+        a_config(work_item_id),
+        work_item_id,
+        the_work_item,
+        the_project_directory,
+        a_run_beginning_at(the_work_item, the_projects_root),
+    )
+
+
 @aisdlc.command()
 def resume(
     repository: str = typer.Argument(..., help="owner/name, the way GitHub writes it."),

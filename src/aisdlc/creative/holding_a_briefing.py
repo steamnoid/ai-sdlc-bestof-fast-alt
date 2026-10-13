@@ -27,6 +27,7 @@ class ARepositoryBriefedItself(BaseModel):
     what_this_repository_is: str
     how_many_opportunities_were_found: int
     how_many_became_filings: int
+    work_item_ids: list[str] = []
 
     def how_many_were_filed(self) -> int:
         """How many of the opportunities became issues on the outside world.

@@ -446,6 +446,8 @@ def _the_lines_of_a_pull_request_body(work_item: WorkItem) -> list[str]:
         "",
         f"- The request this delivery answers: {work_item.requested.filed_as.address}",
         f"- filed as issue {work_item.requested.filed_as.number}.",
+        "",
+        f"Closes #{work_item.requested.filed_as.number}.",
     ]
     # **Nothing here says whether the filing has been closed since**, and that is a gap rather
     # than a choice: `github.read_issue` reads `state`, and `TheIssueThisAnswers` deliberately
