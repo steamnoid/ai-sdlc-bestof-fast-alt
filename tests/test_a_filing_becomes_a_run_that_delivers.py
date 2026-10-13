@@ -653,3 +653,38 @@ def test_start_walks_a_filing_through_eight_gates_to_a_delivery(
     assert what_was_opened and "Closes #42" in str(what_was_opened[0]), (
         "the terminal walk delivered nothing whose body closes the issue it answers"
     )
+
+
+def test_a_filing_that_never_walked_can_be_resumed_at_the_beginning(
+    a_register_and_a_projects_root, creative_mode_on: None
+) -> None:
+    """Commissioning fills the room `resume` opens onto, so a filing that never walked
+    is found and rebuilds the beginning state rather than being refused as unregistered.
+
+    **The docstring on `resume` used to say the opposite** — that no production path
+    writes the per-run register, so the command refuses everything it is given. That
+    was true until commissioning started writing both registers; a sentence claiming
+    it still does would send a person who just lost a terminal away from work that
+    is on disk.
+    """
+    import os
+
+    from aisdlc.tools.a_resumed_run_of import a_resumed_run_of
+    from aisdlc.tools.the_project_directory import where_projects_live
+
+    _, the_projects_root = a_register_and_a_projects_root
+    os.environ["AISDLC_PROJECTS_DIR"] = str(the_projects_root)
+
+    filing = filing_the_picks_a_person_made(
+        _a_briefing_with(_an_opportunity()), [0], _an_issue_opener_that_records()[0]
+    )
+    the_id = filing.work_item_ids[0]
+
+    resumed = a_resumed_run_of(A_REPOSITORY, the_id, where_projects_live())
+
+    assert resumed["work_item"].work_item_id == the_id
+    assert resumed["work_item"].stage is Stage.READY
+    assert resumed["presented_artifact_id"] == "DiscoveryReport", (
+        "a run that produced nothing resumes where a fresh run begins — presenting "
+        "anything else would put a document in front of a person a second time"
+    )
