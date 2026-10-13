@@ -739,3 +739,20 @@ def test_the_picks_call_answers_with_the_work_item_ids_it_filed(
             the_work_item_registered_at(a_register, the_answer["work_item_ids"][0]).stage
             is Stage.READY
         )
+
+
+def test_starting_a_blank_work_item_id_is_refused_before_anything_looks_it_up(
+    a_register_and_a_projects_root,
+) -> None:
+    """A blank id names nothing on the board, so the edge refuses it as a 400
+    rather than a 404 — a lookup that found nothing would say the wrong thing
+    about an id that was never an id."""
+    _, the_projects_root = a_register_and_a_projects_root
+    os.environ["AISDLC_PROJECTS_DIR"] = str(the_projects_root)
+
+    the_runs = TheRunsThisProcessIsHolding()
+    with TestClient(the_api_over(_the_open_register(), the_runs)) as the_board:
+        refused = the_board.post("/api/runs/from-work-item", json={"work_item_id": "   "})
+
+    assert refused.status_code == 400, refused.text
+    assert "nothing on the board" in refused.json()["detail"]
