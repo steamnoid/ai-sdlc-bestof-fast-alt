@@ -257,6 +257,36 @@ def test_a_filing_walks_eight_gates_and_its_pull_request_closes_the_issue(
     )
 
 
+def test_a_filing_advertises_the_shape_the_boards_start_button_reads(
+    a_register_and_a_projects_root,
+    a_repository_to_clone_into: Path,
+    creative_mode_on: None,
+) -> None:
+    """A fresh filing's story is what `theRunToStartIn` offers its button on.
+
+    **The board renders and never decides, so the shape it reads is a contract.**
+    The button appears on a card at `READY` with no question, no gates and no thread
+    walking — and a story that stopped advertising any one of those would leave the
+    filing with no gesture that starts it, while the API underneath still could.
+    """
+    _, the_projects_root = a_register_and_a_projects_root
+    os.environ["AISDLC_PROJECTS_DIR"] = str(the_projects_root)
+
+    filing = filing_the_picks_a_person_made(
+        _a_briefing_with(_an_opportunity()), [0], _an_issue_opener_that_records()[0]
+    )
+    the_id = filing.work_item_ids[0]
+
+    the_runs = _the_runs_holding_fakes(a_repository_to_clone_into)
+    with TestClient(the_api_over(_the_open_register(), the_runs)) as the_board:
+        the_story = the_board.get(f"/api/runs/{the_id}").json()
+
+    assert the_story["card"]["stage"] == "READY"
+    assert the_story["the_question"] is None
+    assert the_story["gates"] == []
+    assert the_story["is_still_working"] is False
+
+
 def test_a_pull_request_body_for_a_filing_closes_its_issue() -> None:
     """The unit half: a filed request renders `Closes #N`, a typed one renders nothing."""
     from aisdlc.graph.deliver_node import _the_lines_of_a_pull_request_body
